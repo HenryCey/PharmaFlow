@@ -1,0 +1,60 @@
+{% load static %}
+<aside
+    x-show="sidebarOpen"
+    x-transition
+    class="w-64 shrink-0 bg-slate-900 text-slate-200 flex flex-col h-full"
+>
+    <div class="h-16 flex items-center px-5 border-b border-slate-800">
+        <span class="text-lg font-semibold text-white">PharmaFlow</span>
+    </div>
+
+    <nav class="flex-1 overflow-y-auto py-4 space-y-1">
+        {% url 'dashboard:home' as dashboard_url %}
+        {% url 'accounts:user_list' as users_url %}
+        {% url 'settings_app:settings' as settings_url %}
+
+        <a href="{{ dashboard_url }}"
+           class="flex items-center gap-3 px-5 py-2.5 text-sm rounded-none hover:bg-slate-800 hover:text-white transition
+                  {% if request.path == dashboard_url %}bg-slate-800 text-white border-l-2 border-primary{% endif %}">
+            <span>Dashboard</span>
+        </a>
+
+        {% comment %}
+        Inventory / Sales / Purchases / Customers / Suppliers / Reports are
+        placeholders until their sprints are built — keeping every nav
+        item from the UI Contract visible now avoids relayout later.
+        {% endcomment %}
+        <span class="block px-5 py-2.5 text-sm text-slate-500 cursor-not-allowed" title="Coming soon">Inventory</span>
+        <span class="block px-5 py-2.5 text-sm text-slate-500 cursor-not-allowed" title="Coming soon">Sales</span>
+        <span class="block px-5 py-2.5 text-sm text-slate-500 cursor-not-allowed" title="Coming soon">Purchases</span>
+        <span class="block px-5 py-2.5 text-sm text-slate-500 cursor-not-allowed" title="Coming soon">Customers</span>
+        <span class="block px-5 py-2.5 text-sm text-slate-500 cursor-not-allowed" title="Coming soon">Suppliers</span>
+        <span class="block px-5 py-2.5 text-sm text-slate-500 cursor-not-allowed" title="Coming soon">Reports</span>
+
+        {% if perms.accounts.manage_users %}
+        <a href="{{ users_url }}"
+           class="flex items-center gap-3 px-5 py-2.5 text-sm hover:bg-slate-800 hover:text-white transition
+                  {% if request.path == users_url %}bg-slate-800 text-white border-l-2 border-primary{% endif %}">
+            <span>Users</span>
+        </a>
+        {% endif %}
+
+        {% if perms.settings_app.change_pharmacysettings %}
+        <a href="{{ settings_url }}"
+           class="flex items-center gap-3 px-5 py-2.5 text-sm hover:bg-slate-800 hover:text-white transition
+                  {% if request.path == settings_url %}bg-slate-800 text-white border-l-2 border-primary{% endif %}">
+            <span>Settings</span>
+        </a>
+        {% endif %}
+    </nav>
+
+    <div class="border-t border-slate-800 py-2">
+        <form method="post" action="{% url 'accounts:logout' %}">
+            {% csrf_token %}
+            <button type="submit"
+                class="w-full flex items-center gap-3 px-5 py-2.5 text-sm text-left hover:bg-slate-800 hover:text-white transition">
+                Logout
+            </button>
+        </form>
+    </div>
+</aside>

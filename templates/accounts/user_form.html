@@ -1,0 +1,24 @@
+{% extends "layout/base.html" %}
+{% block page_title %}{% if object %}Edit User{% else %}Add User{% endif %}{% endblock %}
+{% block content %}
+<div class="max-w-lg bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+    <form method="post" novalidate>
+        {% csrf_token %}
+        {% include "components/_input.html" with field=form.username %}
+        {% include "components/_input.html" with field=form.first_name %}
+        {% include "components/_input.html" with field=form.last_name %}
+        {% include "components/_input.html" with field=form.email %}
+        {% include "components/_input.html" with field=form.phone %}
+        {% include "components/_input.html" with field=form.role %}
+        {% include "components/_input.html" with field=form.status %}
+        {% include "components/_input.html" with field=form.password helper="Leave blank to keep the current password." %}
+
+        <div class="flex gap-2 mt-4">
+            {% include "components/_button.html" with label="Save" variant="primary" type="submit" %}
+            <a href="{% url 'accounts:user_list' %}">
+                {% include "components/_button.html" with label="Cancel" variant="secondary" %}
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,23 @@
+{% comment %}
+Usage: {% include "components/_button.html" with label="Save" variant="primary" %}
+variant: "primary" (default) | "secondary" | "danger"
+Only these three exist, per the UI Contract — do not add a fourth variant here.
+{% endcomment %}
+{% if variant == "danger" %}
+    {% with classes="bg-danger hover:bg-danger-dark text-white" %}
+        <button type="{{ type|default:'button' }}" {% if attrs %}{{ attrs }}{% endif %}
+            class="inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium {{ classes }} disabled:opacity-50">
+            {{ label }}
+        </button>
+    {% endwith %}
+{% elif variant == "secondary" %}
+    <button type="{{ type|default:'button' }}" {% if attrs %}{{ attrs }}{% endif %}
+        class="inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50">
+        {{ label }}
+    </button>
+{% else %}
+    <button type="{{ type|default:'button' }}" {% if attrs %}{{ attrs }}{% endif %}
+        class="inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium bg-primary hover:bg-primary-dark text-white disabled:opacity-50">
+        {{ label }}
+    </button>
+{% endif %}

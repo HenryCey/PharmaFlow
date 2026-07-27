@@ -1,0 +1,15 @@
+{% extends "layout/base.html" %}
+{% block page_title %}Users{% endblock %}
+{% block content %}
+<div class="flex items-center justify-between mb-4">
+    <form method="get" class="max-w-xs">
+        <input type="search" name="q" value="{{ request.GET.q }}" placeholder="Search users..."
+               class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+    </form>
+    <a href="{% url 'accounts:user_create' %}">
+        {% include "components/_button.html" with label="Add User" variant="primary" %}
+    </a>
+</div>
+
+{% include "components/_table.html" with headers=table_headers rows=table_rows page_obj=page_obj empty_message="No users found." empty_action_label="Add First User" empty_action_url=add_url %}
+{% endblock %}

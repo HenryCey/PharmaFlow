@@ -1,0 +1,18 @@
+{% extends "layout/base.html" %}
+{% block page_title %}Dashboard{% endblock %}
+{% block content %}
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    {% include "components/_card.html" with title="Today's Sales" value="\u20140" description="Coming soon" %}
+    {% include "components/_card.html" with title="Low Stock Items" value="\u20140" description="Coming soon" %}
+    {% include "components/_card.html" with title="Expiring Soon" value="\u20140" description="Coming soon" %}
+    {% include "components/_card.html" with title="Active Users" value=active_user_count %}
+</div>
+
+<div class="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+    <h2 class="text-sm font-semibold text-slate-900 mb-1">Welcome, {{ request.user.get_short_name }}.</h2>
+    <p class="text-sm text-slate-500">
+        You're logged in as <strong>{{ request.user.role.name|default:"an unassigned role" }}</strong>.
+        Inventory, Sales and Reports light up as their sprints are completed.
+    </p>
+</div>
+{% endblock %}

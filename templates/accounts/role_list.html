@@ -1,0 +1,12 @@
+{% extends "layout/base.html" %}
+{% block page_title %}Roles{% endblock %}
+{% block content %}
+<div class="flex items-center justify-between mb-4">
+    <h2 class="text-sm text-slate-500">Manage roles and their permissions</h2>
+    <a href="{% url 'accounts:role_create' %}">
+        {% include "components/_button.html" with label="Add Role" variant="primary" %}
+    </a>
+</div>
+
+{% include "components/_table.html" with headers=table_headers rows=table_rows empty_message="No roles found." empty_action_label="Add First Role" empty_action_url=add_url %}
+{% endblock %}

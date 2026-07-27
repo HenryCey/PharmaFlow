@@ -1,0 +1,23 @@
+/* Small hand-written additions Tailwind's CDN build can't cover (Alpine's
+   x-cloak needs a manual rule since the CDN build has no build step to
+   inject it automatically). */
+[x-cloak] { display: none !important; }
+
+input[type="text"],
+input[type="search"],
+input[type="email"],
+input[type="password"],
+input[type="tel"],
+textarea,
+select {
+    border: 1px solid #cbd5e1;
+    border-radius: 0.375rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    width: 100%;
+}
+input:focus, textarea:focus, select:focus {
+    outline: 2px solid #0f766e;
+    outline-offset: 1px;
+    border-color: #0f766e;
+}

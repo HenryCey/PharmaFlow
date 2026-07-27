@@ -1,0 +1,29 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}PharmaFlow{% endblock %}</title>
+
+    {% include "layout/partials/_tailwind_cdn.html" %}
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+    <script defer src="https://unpkg.com/alpinejs@3.13.5/dist/cdn.min.js"></script>
+    <link rel="stylesheet" href="{% static 'css/app.css' %}">
+</head>
+<body class="h-full font-sans text-slate-800" x-data="{ sidebarOpen: true }">
+
+    <div class="flex h-full">
+        {% include "layout/partials/_sidebar.html" %}
+
+        <div class="flex-1 flex flex-col min-w-0">
+            {% include "layout/partials/_header.html" %}
+
+            <main class="flex-1 overflow-y-auto p-6">
+                {% include "components/_toast.html" %}
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+    </div>
+</body>
+</html>

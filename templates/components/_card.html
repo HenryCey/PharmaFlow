@@ -1,0 +1,11 @@
+{% comment %}
+Usage:
+{% include "components/_card.html" with title="Total Users" value=user_count %}
+For arbitrary HTML body content, wrap manually using the same classes
+shown here rather than duplicating a second card style.
+{% endcomment %}
+<div class="bg-white rounded-lg shadow-sm border border-slate-200 p-5">
+    {% if title %}<p class="text-sm text-slate-500">{{ title }}</p>{% endif %}
+    {% if value %}<p class="text-2xl font-semibold text-slate-900 mt-1">{{ value }}</p>{% endif %}
+    {% if description %}<p class="text-xs text-slate-400 mt-1">{{ description }}</p>{% endif %}
+</div>

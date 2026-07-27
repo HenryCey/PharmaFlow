@@ -1,0 +1,21 @@
+{% extends "layout/base.html" %}
+{% block page_title %}Pharmacy Settings{% endblock %}
+{% block content %}
+<div class="max-w-lg bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+    <form method="post" enctype="multipart/form-data" novalidate>
+        {% csrf_token %}
+        {% include "components/_input.html" with field=form.pharmacy_name %}
+        {% include "components/_input.html" with field=form.logo %}
+        {% include "components/_input.html" with field=form.address %}
+        {% include "components/_input.html" with field=form.phone %}
+        {% include "components/_input.html" with field=form.email %}
+        {% include "components/_input.html" with field=form.currency_symbol helper="Shown before every price throughout the app, e.g. \u20a61,500." %}
+        {% include "components/_input.html" with field=form.receipt_footer_note %}
+        {% include "components/_input.html" with field=form.default_printer_name %}
+
+        <div class="flex gap-2 mt-4">
+            {% include "components/_button.html" with label="Save Settings" variant="primary" type="submit" %}
+        </div>
+    </form>
+</div>
+{% endblock %}
