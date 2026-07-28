@@ -1,0 +1,17 @@
+{% extends "layout/base.html" %}
+{% block page_title %}Manufacturers{% endblock %}
+{% block content %}
+<div class="flex items-center justify-between mb-4">
+    <form method="get" class="max-w-xs">
+        <input type="search" name="q" value="{{ search_query }}" placeholder="Search manufacturers..."
+               class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+    </form>
+    {% if add_url %}
+    <a href="{{ add_url }}">
+        {% include "components/_button.html" with label="Add Manufacturer" variant="primary" %}
+    </a>
+    {% endif %}
+</div>
+
+{% include "components/_table.html" with headers=table_headers rows=table_rows page_obj=page_obj empty_message="No manufacturers found." empty_action_label="Add First Manufacturer" empty_action_url=add_url %}
+{% endblock %}

@@ -120,6 +120,22 @@ class User(AbstractBaseUser, PermissionsMixin, SoftDeleteModel, TimeStampedModel
     def is_active(self, value):
         self.status = self.STATUS_ACTIVE if value else self.STATUS_INACTIVE
 
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        # Bug fix (Sprint 2 permissions bug): `role` is a plain FK used for
+        # display/business logic, but Django's ModelBackend resolves
+        # permissions through PermissionsMixin's `groups` M2M, not through
+        # this FK. Nothing previously kept them in sync, so every
+        # non-superuser (Administrator/Pharmacist/Cashier) always had zero
+        # group membership no matter what seed_role_permissions assigned to
+        # Role.group — has_perm() was always False for them. This mirrors
+        # Role.save()'s own pattern of enforcing an invariant on every save,
+        # and runs after super().save() since the M2M needs an existing pk.
+        if self.role_id:
+            self.groups.set([self.role.group])
+        else:
+            self.groups.clear()
+
 
 class LoginHistory(models.Model):
     """One row per login attempt, success or failure (Database Spec /

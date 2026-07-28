@@ -12,6 +12,11 @@
         {% url 'dashboard:home' as dashboard_url %}
         {% url 'accounts:user_list' as users_url %}
         {% url 'settings_app:settings' as settings_url %}
+        {% url 'inventory:drug_list' as drug_list_url %}
+        {% url 'inventory:category_list' as category_list_url %}
+        {% url 'inventory:manufacturer_list' as manufacturer_list_url %}
+        {% url 'inventory:dosageform_list' as dosageform_list_url %}
+        {% url 'inventory:unit_list' as unit_list_url %}
 
         <a href="{{ dashboard_url }}"
            class="flex items-center gap-3 px-5 py-2.5 text-sm rounded-none hover:bg-slate-800 hover:text-white transition
@@ -20,11 +25,48 @@
         </a>
 
         {% comment %}
-        Inventory / Sales / Purchases / Customers / Suppliers / Reports are
+        Sales / Purchases / Customers / Suppliers / Reports remain
         placeholders until their sprints are built — keeping every nav
         item from the UI Contract visible now avoids relayout later.
+        Inventory is built as of Sprint 2, so it's a real expandable
+        section instead of a placeholder.
         {% endcomment %}
+        {% if perms.inventory.view_drug %}
+        <div x-data="{ open: {% if request.resolver_match.app_name == 'inventory' %}true{% else %}false{% endif %} }">
+            <button @click="open = !open" type="button"
+                class="w-full flex items-center justify-between px-5 py-2.5 text-sm hover:bg-slate-800 hover:text-white transition">
+                <span>Inventory</span>
+                <span x-text="open ? '−' : '+'"></span>
+            </button>
+            <div x-show="open" x-cloak class="pb-1">
+                <a href="{{ drug_list_url }}"
+                   class="block pl-9 pr-5 py-2 text-sm hover:bg-slate-800 hover:text-white transition
+                          {% if request.path == drug_list_url %}bg-slate-800 text-white{% endif %}">Drugs</a>
+                {% if perms.inventory.view_category %}
+                <a href="{{ category_list_url }}"
+                   class="block pl-9 pr-5 py-2 text-sm hover:bg-slate-800 hover:text-white transition
+                          {% if request.path == category_list_url %}bg-slate-800 text-white{% endif %}">Categories</a>
+                {% endif %}
+                {% if perms.inventory.view_manufacturer %}
+                <a href="{{ manufacturer_list_url }}"
+                   class="block pl-9 pr-5 py-2 text-sm hover:bg-slate-800 hover:text-white transition
+                          {% if request.path == manufacturer_list_url %}bg-slate-800 text-white{% endif %}">Manufacturers</a>
+                {% endif %}
+                {% if perms.inventory.view_dosageform %}
+                <a href="{{ dosageform_list_url }}"
+                   class="block pl-9 pr-5 py-2 text-sm hover:bg-slate-800 hover:text-white transition
+                          {% if request.path == dosageform_list_url %}bg-slate-800 text-white{% endif %}">Dosage Forms</a>
+                {% endif %}
+                {% if perms.inventory.view_unit %}
+                <a href="{{ unit_list_url }}"
+                   class="block pl-9 pr-5 py-2 text-sm hover:bg-slate-800 hover:text-white transition
+                          {% if request.path == unit_list_url %}bg-slate-800 text-white{% endif %}">Units</a>
+                {% endif %}
+            </div>
+        </div>
+        {% else %}
         <span class="block px-5 py-2.5 text-sm text-slate-500 cursor-not-allowed" title="Coming soon">Inventory</span>
+        {% endif %}
         <span class="block px-5 py-2.5 text-sm text-slate-500 cursor-not-allowed" title="Coming soon">Sales</span>
         <span class="block px-5 py-2.5 text-sm text-slate-500 cursor-not-allowed" title="Coming soon">Purchases</span>
         <span class="block px-5 py-2.5 text-sm text-slate-500 cursor-not-allowed" title="Coming soon">Customers</span>

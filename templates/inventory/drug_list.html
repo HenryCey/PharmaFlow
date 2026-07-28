@@ -1,0 +1,59 @@
+{% extends "layout/base.html" %}
+{% block page_title %}Drugs{% endblock %}
+{% block content %}
+<div class="flex items-center justify-between mb-4 gap-4 flex-wrap">
+    <form method="get" class="flex flex-wrap items-center gap-2">
+        <input type="search" name="q" value="{{ search_query }}" placeholder="Search name, SKU, barcode..."
+               class="w-64 rounded-md border border-slate-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+
+        <select name="category" onchange="this.form.submit()"
+                class="rounded-md border border-slate-300 px-2 py-1.5 text-sm">
+            <option value="">All Categories</option>
+            {% for cat in categories %}
+                <option value="{{ cat.pk }}" {% if selected_category == cat.pk|stringformat:"s" %}selected{% endif %}>{{ cat.name }}</option>
+            {% endfor %}
+        </select>
+
+        <select name="manufacturer" onchange="this.form.submit()"
+                class="rounded-md border border-slate-300 px-2 py-1.5 text-sm">
+            <option value="">All Manufacturers</option>
+            {% for man in manufacturers %}
+                <option value="{{ man.pk }}" {% if selected_manufacturer == man.pk|stringformat:"s" %}selected{% endif %}>{{ man.name }}</option>
+            {% endfor %}
+        </select>
+
+        <select name="status" onchange="this.form.submit()"
+                class="rounded-md border border-slate-300 px-2 py-1.5 text-sm">
+            <option value="">All Statuses</option>
+            {% for value, label in status_choices %}
+                <option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+
+        <label class="flex items-center gap-1.5 text-sm text-slate-700">
+            <input type="checkbox" name="low_stock" value="1" onchange="this.form.submit()" {% if low_stock == "1" %}checked{% endif %}>
+            Low Stock only
+        </label>
+
+        {% include "components/_button.html" with label="Filter" variant="secondary" type="submit" %}
+    </form>
+
+    {% if add_url %}
+    <a href="{{ add_url }}">
+        {% include "components/_button.html" with label="Add Drug" variant="primary" %}
+    </a>
+    {% endif %}
+</div>
+
+<div class="flex gap-4 mb-3 text-xs text-slate-500">
+    <span>Sort by:</span>
+    {% for key, label in sort_options %}
+        <a href="?{% if search_query %}q={{ search_query }}&{% endif %}sort={{ key }}&dir={% if current_sort == key and current_dir == 'asc' %}desc{% else %}asc{% endif %}"
+           class="hover:text-primary hover:underline {% if current_sort == key %}text-primary font-medium{% endif %}">
+            {{ label }}{% if current_sort == key %} ({{ current_dir }}){% endif %}
+        </a>
+    {% endfor %}
+</div>
+
+{% include "components/_table.html" with headers=table_headers rows=table_rows page_obj=page_obj empty_message="No drugs found." empty_action_label="Add First Drug" empty_action_url=add_url %}
+{% endblock %}

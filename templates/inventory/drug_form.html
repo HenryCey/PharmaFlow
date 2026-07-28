@@ -1,0 +1,42 @@
+{% extends "layout/base.html" %}
+{% block page_title %}{% if object %}Edit Drug{% else %}Add Drug{% endif %}{% endblock %}
+{% block content %}
+<div class="max-w-2xl bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+    <form method="post" novalidate>
+        {% csrf_token %}
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
+            {% include "components/_input.html" with field=form.name %}
+            {% include "components/_input.html" with field=form.generic_name %}
+            {% include "components/_input.html" with field=form.brand_name %}
+            {% include "components/_input.html" with field=form.sku helper="Leave blank to assign later." %}
+            {% include "components/_input.html" with field=form.barcode helper="Type manually, or click into this field and scan with a USB barcode scanner." %}
+            {% include "components/_input.html" with field=form.category %}
+            {% include "components/_input.html" with field=form.manufacturer %}
+            {% include "components/_input.html" with field=form.dosage_form %}
+            {% include "components/_input.html" with field=form.unit %}
+            {% include "components/_input.html" with field=form.strength %}
+            {% include "components/_input.html" with field=form.cost_price %}
+            {% include "components/_input.html" with field=form.selling_price %}
+            {% include "components/_input.html" with field=form.minimum_stock %}
+            {% include "components/_input.html" with field=form.reorder_level %}
+            {% include "components/_input.html" with field=form.status %}
+        </div>
+        {% include "components/_input.html" with field=form.description %}
+
+        {% if object %}
+        <div class="mb-4 text-sm text-slate-500">
+            Current Stock: <strong class="text-slate-700">{{ object.current_stock }}</strong>
+            <span class="text-xs">(managed automatically once Purchases/Stock Adjustments are available)</span>
+        </div>
+        {% endif %}
+
+        <div class="flex gap-2 mt-2">
+            {% include "components/_button.html" with label="Save" variant="primary" type="submit" %}
+            <a href="{% url 'inventory:drug_list' %}">
+                {% include "components/_button.html" with label="Cancel" variant="secondary" %}
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}

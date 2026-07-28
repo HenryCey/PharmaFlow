@@ -1,0 +1,86 @@
+{% extends "layout/base.html" %}
+{% block page_title %}{{ drug.name }}{% endblock %}
+{% block content %}
+<div class="flex items-center justify-between mb-4">
+    <div>
+        <h2 class="text-lg font-semibold text-slate-900">{{ drug.name }}</h2>
+        <p class="text-sm text-slate-500">{{ drug.generic_name|default:"—" }}{% if drug.strength %} &middot; {{ drug.strength }}{% endif %}</p>
+    </div>
+    <div class="flex gap-2">
+        {% if perms.inventory.change_drug %}
+        <a href="{% url 'inventory:drug_update' drug.pk %}">
+            {% include "components/_button.html" with label="Edit" variant="secondary" %}
+        </a>
+        {% endif %}
+        <a href="{% url 'inventory:drug_list' %}">
+            {% include "components/_button.html" with label="Back to Drugs" variant="secondary" %}
+        </a>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    {% include "components/_card.html" with title="Selling Price" value=drug.selling_price %}
+    {% include "components/_card.html" with title="Cost Price" value=drug.cost_price %}
+    {% include "components/_card.html" with title="Current Stock" value=drug.current_stock description="Managed by Purchases/Stock Adjustments" %}
+    {% include "components/_card.html" with title="Reorder Level" value=drug.reorder_level %}
+</div>
+
+<div class="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+    <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 text-sm">
+        <div>
+            <dt class="text-slate-500">Brand Name</dt>
+            <dd class="text-slate-900 font-medium">{{ drug.brand_name|default:"—" }}</dd>
+        </div>
+        <div>
+            <dt class="text-slate-500">SKU</dt>
+            <dd class="text-slate-900 font-medium">{{ drug.sku|default:"—" }}</dd>
+        </div>
+        <div>
+            <dt class="text-slate-500">Barcode</dt>
+            <dd class="text-slate-900 font-medium">{{ drug.barcode|default:"—" }}</dd>
+        </div>
+        <div>
+            <dt class="text-slate-500">Category</dt>
+            <dd class="text-slate-900 font-medium">{{ drug.category.name }}</dd>
+        </div>
+        <div>
+            <dt class="text-slate-500">Manufacturer</dt>
+            <dd class="text-slate-900 font-medium">{{ drug.manufacturer.name|default:"—" }}</dd>
+        </div>
+        <div>
+            <dt class="text-slate-500">Dosage Form</dt>
+            <dd class="text-slate-900 font-medium">{{ drug.dosage_form.name|default:"—" }}</dd>
+        </div>
+        <div>
+            <dt class="text-slate-500">Unit</dt>
+            <dd class="text-slate-900 font-medium">{{ drug.unit.name }}</dd>
+        </div>
+        <div>
+            <dt class="text-slate-500">Minimum Stock</dt>
+            <dd class="text-slate-900 font-medium">{{ drug.minimum_stock }}</dd>
+        </div>
+        <div>
+            <dt class="text-slate-500">Status</dt>
+            <dd class="text-slate-900 font-medium">{{ drug.get_status_display }}</dd>
+        </div>
+        <div>
+            <dt class="text-slate-500">Created By</dt>
+            <dd class="text-slate-900 font-medium">{{ drug.created_by.get_full_name|default:"—" }}</dd>
+        </div>
+        <div>
+            <dt class="text-slate-500">Created At</dt>
+            <dd class="text-slate-900 font-medium">{{ drug.created_at|date:"Y-m-d H:i" }}</dd>
+        </div>
+        <div>
+            <dt class="text-slate-500">Last Updated</dt>
+            <dd class="text-slate-900 font-medium">{{ drug.updated_at|date:"Y-m-d H:i" }}</dd>
+        </div>
+        {% if drug.description %}
+        <div class="sm:col-span-2">
+            <dt class="text-slate-500">Description</dt>
+            <dd class="text-slate-900">{{ drug.description }}</dd>
+        </div>
+        {% endif %}
+    </dl>
+</div>
+{% endblock %}
