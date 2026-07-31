@@ -5,6 +5,63 @@ All notable changes to PharmaFlow are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.2.0] - 2026-07-29
+
+Sprint 3 (Sales Module) delivery per the Sprint 3 Implementation Plan. Sprint 1/2 continue to work exactly as before — no existing module was redesigned; every change to already-released files was additive wiring or a targeted bug fix (see Fixed, below).
+
+**Architecture note:** Sprint 3 added a third new app, `apps/stock`, beyond what the original Build Request literally listed. This was a deliberate, approved addition — the Technical Architecture requires stock quantity to be written only inside the same transaction as an `InventoryMovement` (Purchase, Sale, or Stock Adjustment), and Sprint 2 had left `Drug.current_stock` read-only specifically pending this. `stock` is treated as shared infrastructure required by Sales, not a standalone business module — it has no sidebar entry of its own; it's reached from the Drug detail/list pages in `apps/inventory`.
+
+### Added
+
+- **`apps/customers`**: `Customer` CRUD (name, phone, address), soft-deletable, with purchase history shown on the detail page. Walk-in customers are not a database row — `Sale.customer` is simply nullable.
+- **`apps/stock`** (shared infrastructure): `InventoryMovement` (append-only ledger, the single source of truth for stock quantity) and `StockAdjustment` (Opening Stock, Damage, Expired, Lost, Correction). `record_movement()` is the *only* function anywhere in the project permitted to write `Drug.current_stock`. Reached via "Adjust Stock" (Drug list row action and Drug detail page) and a "Movement History" section on the Drug detail page.
+- **`apps/sales`**: `Sale`/`SaleItem` models (custom permissions `cancel_sale`, `view_all_sales`, alongside the standard CRUD ones). Business logic split into four focused service modules per the approved refinement: `cart_service.py` (session-scoped cart), `checkout_service.py` (the atomic checkout transaction), `receipt_service.py` (receipt render context), `sales_service.py` (cancellation, row-scoped history, daily summary).
+- **POS**: drug search (name/generic name/brand name/SKU/barcode) with an HTMX-powered cart — the first real use of `hx-post` in this project; added the necessary CSRF header wiring to `base.html` to support it.
+- **Checkout**: customer selection (optional — walk-in by default), payment method, discount; atomically deducts stock per line and rolls back the entire sale if any line can't be fulfilled.
+- **Sales History**: row-level scoped — a Cashier sees only their own sales; `sales.view_all_sales` (Owner/Administrator/Pharmacist) sees everyone's.
+- **Sale Cancellation**: reverses stock via a new ledger movement (the original sale movements are never edited/deleted — the ledger is append-only); Cashier cannot cancel.
+- **Receipt**: on-screen + separate Thermal/A4 print stylesheets, reusing the existing `NumberingSequence.generate_document_number("sale_receipt")` service (already seeded since Sprint 1, unchanged).
+- **Today's Sales**: a deliberately lightweight daily summary (count, revenue, top-selling drugs) — not the full parameterized Reports engine (date ranges, PDF export, Profit/Inventory/Expiry reports), which stays Sprint 4 scope per the Feature Specs.
+- Sidebar: "Sales" (Point of Sale / Sales History / Today's Sales) and "Customers" are now real, permission-gated entries. Purchases/Suppliers/Reports remain "Coming soon" placeholders.
+- `seed_role_permissions` extended for `stock`/`customers`/`sales`; Administrator and Pharmacist get full management access, Cashier gets POS + own-history + read-only drug lookup only, per the Sprint 3 Permissions Matrix.
+
+### Changed
+
+- **Drug list Actions column** redesigned as a compact "Actions ▾" dropdown (reusing the existing `_dropdown.html` component) instead of concatenated inline links, which wrapped unreadably once a 4th action ("Adjust Stock") was added. Destructive actions (Discontinue) render in red; normal actions stay plain — `_dropdown.html` gained optional per-item `danger` styling to support this.
+- **Row numbering** added to the shared `_table.html` component — applies automatically to all 8 list views in the project (Users, Roles, Drugs, Categories, Manufacturers, Dosage Forms, Units, Customers) with no per-view changes, and continues correctly across pages rather than resetting to 1.
+- **Every list search box** in the project now has a visible Search button next to the input (previously Enter-only): Users, Categories, Manufacturers, Dosage Forms, Units, Customers, and POS. (Drug list already had one, since it also has dropdown filters requiring an explicit "apply" action.)
+- **Global Search box** in the header (visible but never implemented, inherited from Sprint 1's UI shell) is now disabled with a "coming soon" affordance, matching the sidebar's existing placeholder convention — prevents it from looking broken before Global Search is actually built.
+- **Stock Adjustment form**: replaced the previous implicit signed-quantity entry with an explicit **Direction** (Increase/Decrease) field plus a magnitude-only Quantity — see Fixed, below, for the bug this corrects. When a drug's current stock is exactly 0, the form now defaults Adjustment Type to Opening Stock (Direction: Increase) and shows a contextual helper message, reducing friction during initial inventory setup.
+
+### Fixed
+
+Issues found and corrected during Sprint 3's QA rounds, before this version was tagged:
+
+- **Migration drift on `stock` (`makemigrations` was not clean).** `InventoryMovement.Meta.indexes` had no explicit `name=`, so Django auto-computed a hash-based index name at migration-check time that didn't match the human-readable name manually written into the hand-crafted `0001_initial.py`. Fixed by giving the index an explicit name in the model itself, matching the migration — the same root-cause shape as Sprint 2's Meta-options drift, this time for `indexes` instead of `permissions`.
+- **Latent permission cross-matching bug in `seed_role_permissions`.** The permission lookup used independent `app_label__in`/`codename__in` filters — a cross-product, not exact `(app_label, codename)` pairs — which only ever worked by coincidence because no codename collided across apps. Rebuilt as a proper OR-of-exact-pairs via `Q` objects now that more apps exist.
+- **Stock Adjustment quantity field appeared invisible/unstyled** ("only after clicking the empty area can values be entered"). Root cause: the project's shared `input` styling rule in `static/css/app.css` never included `input[type="number"]` — a pre-existing gap from Sprint 1 that Sprint 2's Drug price fields also silently had. Fixed globally in the one shared rule, so every numeric field in the project is fixed at once, not just this form.
+- **Damage/Expired/Lost adjustments increased stock instead of decreasing it.** `StockAdjustment.quantity` is stored as a signed value, but the form exposed that raw signed field directly with nothing enforcing or clarifying the sign convention, so a plain positive entry for "Damage" was taken literally as an increase. Fixed by splitting the input into an explicit Direction (Increase/Decrease) choice plus a magnitude-only Quantity; the ledger's stored semantics are unchanged, only how a person enters the number.
+- **Clear Cart button, and both Receipt Print buttons, did nothing.** All three were a `<button>` nested inside another `<button>` — invalid HTML that causes browsers to auto-close the outer element (which carried the actual `hx-post`/`onclick` behavior) when the parser hits the inner one, leaving a non-functional inner button as the only clickable element. Same bug class as the Sprint 2 Filter button fix. Fixed by rendering these three buttons directly instead of wrapping the shared `_button.html` component; **confirmed via a project-wide scan that zero nested-button instances remain anywhere in the codebase.**
+- **Quantity spinner incremented by 0.1 instead of 1** on POS and cart quantity fields. Root cause: `step="0.01"` on the number inputs. Fixed to `step="any"` (HTML5-standard: permits any decimal value for typed input — needed for fractional-unit items like liquids — while the native up/down spinner defaults to whole-unit steps).
+
+### Known Limitations
+
+- Same Sprint 2 limitations still apply where unaffected by this sprint (hard-delete on lookup tables, no barcode imaging).
+- POS search covers name/generic name/brand name/SKU/barcode only — not Category (that's the Drug list's own filter dropdown, a separate feature).
+- No PDF export or WeasyPrint integration for receipts yet — on-screen + browser-print (Thermal/A4 stylesheets) only. No generic Invoice/Purchase Order rendering engine (the "Documents" app) — Purchase Orders can't be built sensibly before Purchases exists anyway.
+- "Today's Sales" is a lightweight daily summary, not the full Reports module (date ranges, PDF export, Profit/Inventory/Expiry reports) — that's Sprint 4 scope.
+- No Suppliers or Purchases yet — Stock Adjustments (specifically Opening Stock) remain the only way to seed inventory quantity until Purchases ships.
+- Global Search (header) is now honestly disabled rather than silently broken, but isn't implemented — deferred to a future sprint per the original Roadmap.
+
+### Upgrade Notes
+
+```bash
+python manage.py migrate
+python manage.py seed_role_permissions
+```
+
+No destructive schema changes. `seed_role_permissions` remains idempotent and safe to re-run.
+
 ## [v1.1.0] - 2026-07-28
 
 Sprint 2 (Inventory Management) delivery per the Development Roadmap. Sprint 1 continues to work exactly as before — no Sprint 1 files were changed except `config/settings/base.py`, `config/urls.py`, `templates/layout/partials/_sidebar.html`, `apps/accounts/models.py`, and `apps/accounts/management/commands/seed_role_permissions.py` (see Fixed, below, for why the last two were touched).

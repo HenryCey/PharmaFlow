@@ -29,13 +29,15 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "django.contrib.humanize",
 
-    # PharmaFlow apps (Sprint 1 scope only — later sprints register their
-    # apps here as they are built, per "build only the current sprint").
+    # PharmaFlow apps — registered here as each sprint builds them.
     "apps.common",
     "apps.accounts",
     "apps.settings_app",
     "apps.dashboard",
     "apps.inventory",
+    "apps.stock",
+    "apps.customers",
+    "apps.sales",
 ]
 
 MIDDLEWARE = [

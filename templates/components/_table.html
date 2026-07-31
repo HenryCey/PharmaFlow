@@ -1,13 +1,16 @@
 {% comment %}
 Usage: {% include "components/_table.html" with headers=headers rows=rows page_obj=page_obj empty_message="No records found." empty_action_label="Add First Record" empty_action_url="#" %}
 `rows` is a list of lists of pre-rendered cell strings (safe), so this
-partial stays generic across every module's data.
+partial stays generic across every module's data. Row numbers are
+computed here (continuing correctly across pages via page_obj), so no
+view needs to build its own numbering.
 {% endcomment %}
 <div class="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
     <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-slate-200 text-sm">
             <thead class="bg-slate-50">
                 <tr>
+                    <th class="px-4 py-3 text-left font-medium text-slate-600 w-12">#</th>
                     {% for header in headers %}
                         <th class="px-4 py-3 text-left font-medium text-slate-600">{{ header }}</th>
                     {% endfor %}
@@ -16,13 +19,16 @@ partial stays generic across every module's data.
             <tbody class="divide-y divide-slate-100" id="table-body">
                 {% for row in rows %}
                     <tr class="hover:bg-slate-50">
+                        <td class="px-4 py-3 text-slate-400">
+                            {% if page_obj %}{{ page_obj.start_index|add:forloop.counter0 }}{% else %}{{ forloop.counter }}{% endif %}
+                        </td>
                         {% for cell in row %}
                             <td class="px-4 py-3 text-slate-700">{{ cell }}</td>
                         {% endfor %}
                     </tr>
                 {% empty %}
                     <tr>
-                        <td colspan="{{ headers|length }}" class="px-4 py-10 text-center">
+                        <td colspan="{{ headers|length|add:1 }}" class="px-4 py-10 text-center">
                             <p class="text-slate-500">{{ empty_message|default:"No records found." }}</p>
                             {% if empty_action_url %}
                                 <a href="{{ empty_action_url }}" class="inline-block mt-3">

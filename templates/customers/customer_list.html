@@ -1,0 +1,18 @@
+{% extends "layout/base.html" %}
+{% block page_title %}Customers{% endblock %}
+{% block content %}
+<div class="flex items-center justify-between mb-4">
+    <form method="get" class="max-w-xs flex gap-2">
+        <input type="search" name="q" value="{{ search_query }}" placeholder="Search name or phone..."
+               class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+        {% include "components/_button.html" with label="Search" variant="secondary" type="submit" %}
+    </form>
+    {% if add_url %}
+    <a href="{{ add_url }}">
+        {% include "components/_button.html" with label="Add Customer" variant="primary" %}
+    </a>
+    {% endif %}
+</div>
+
+{% include "components/_table.html" with headers=table_headers rows=table_rows page_obj=page_obj empty_message="No customers found." empty_action_label="Add First Customer" empty_action_url=add_url %}
+{% endblock %}

@@ -1,0 +1,48 @@
+{% extends "layout/base.html" %}
+{% block page_title %}Point of Sale{% endblock %}
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-2">
+        <form method="get" class="mb-4 max-w-md flex gap-2">
+            <input type="search" name="q" value="{{ search_query }}"
+                   placeholder="Search or scan barcode..." autofocus
+                   class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+            {% include "components/_button.html" with label="Search" variant="secondary" type="submit" %}
+        </form>
+
+        {% if search_query %}
+            {% if search_results %}
+            <div class="bg-white rounded-lg shadow-sm border border-slate-200 divide-y divide-slate-100">
+                {% for drug in search_results %}
+                <div class="flex items-center justify-between px-4 py-3">
+                    <div>
+                        <p class="text-sm font-medium text-slate-900">{{ drug.name }}</p>
+                        <p class="text-xs text-slate-500">
+                            {{ drug.strength }} &middot; {{ drug.selling_price }} / {{ drug.unit.name }}
+                            {% if drug.is_out_of_stock %} &middot; <span class="text-danger">Out of Stock</span>{% endif %}
+                        </p>
+                    </div>
+                    <form hx-post="{% url 'sales:cart_add' %}" hx-target="#cart-panel" hx-swap="outerHTML"
+                          class="flex items-center gap-2">
+                        {% csrf_token %}
+                        <input type="hidden" name="drug_id" value="{{ drug.pk }}">
+                        <input type="number" name="quantity" value="1" min="0.01" step="any"
+                               class="w-16 rounded-md border border-slate-300 px-2 py-1 text-sm">
+                        {% include "components/_button.html" with label="Add" variant="primary" type="submit" %}
+                    </form>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-sm text-slate-500">No drugs found for "{{ search_query }}".</p>
+            {% endif %}
+        {% else %}
+        <p class="text-sm text-slate-500">Search by name, SKU, or scan a barcode to begin.</p>
+        {% endif %}
+    </div>
+
+    <div>
+        {% include "sales/partials/_cart_panel.html" %}
+    </div>
+</div>
+{% endblock %}

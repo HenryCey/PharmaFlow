@@ -17,6 +17,10 @@
         {% url 'inventory:manufacturer_list' as manufacturer_list_url %}
         {% url 'inventory:dosageform_list' as dosageform_list_url %}
         {% url 'inventory:unit_list' as unit_list_url %}
+        {% url 'sales:pos' as pos_url %}
+        {% url 'sales:sale_list' as sale_list_url %}
+        {% url 'sales:daily_summary' as daily_summary_url %}
+        {% url 'customers:customer_list' as customer_list_url %}
 
         <a href="{{ dashboard_url }}"
            class="flex items-center gap-3 px-5 py-2.5 text-sm rounded-none hover:bg-slate-800 hover:text-white transition
@@ -67,9 +71,40 @@
         {% else %}
         <span class="block px-5 py-2.5 text-sm text-slate-500 cursor-not-allowed" title="Coming soon">Inventory</span>
         {% endif %}
+        {% if perms.sales.add_sale %}
+        <div x-data="{ open: {% if request.resolver_match.app_name == 'sales' %}true{% else %}false{% endif %} }">
+            <button @click="open = !open" type="button"
+                class="w-full flex items-center justify-between px-5 py-2.5 text-sm hover:bg-slate-800 hover:text-white transition">
+                <span>Sales</span>
+                <span x-text="open ? '−' : '+'"></span>
+            </button>
+            <div x-show="open" x-cloak class="pb-1">
+                <a href="{{ pos_url }}"
+                   class="block pl-9 pr-5 py-2 text-sm hover:bg-slate-800 hover:text-white transition
+                          {% if request.path == pos_url %}bg-slate-800 text-white{% endif %}">Point of Sale</a>
+                {% if perms.sales.view_sale %}
+                <a href="{{ sale_list_url }}"
+                   class="block pl-9 pr-5 py-2 text-sm hover:bg-slate-800 hover:text-white transition
+                          {% if request.path == sale_list_url %}bg-slate-800 text-white{% endif %}">Sales History</a>
+                <a href="{{ daily_summary_url }}"
+                   class="block pl-9 pr-5 py-2 text-sm hover:bg-slate-800 hover:text-white transition
+                          {% if request.path == daily_summary_url %}bg-slate-800 text-white{% endif %}">Today's Sales</a>
+                {% endif %}
+            </div>
+        </div>
+        {% else %}
         <span class="block px-5 py-2.5 text-sm text-slate-500 cursor-not-allowed" title="Coming soon">Sales</span>
+        {% endif %}
         <span class="block px-5 py-2.5 text-sm text-slate-500 cursor-not-allowed" title="Coming soon">Purchases</span>
+        {% if perms.customers.view_customer %}
+        <a href="{{ customer_list_url }}"
+           class="flex items-center gap-3 px-5 py-2.5 text-sm hover:bg-slate-800 hover:text-white transition
+                  {% if request.path == customer_list_url %}bg-slate-800 text-white border-l-2 border-primary{% endif %}">
+            <span>Customers</span>
+        </a>
+        {% else %}
         <span class="block px-5 py-2.5 text-sm text-slate-500 cursor-not-allowed" title="Coming soon">Customers</span>
+        {% endif %}
         <span class="block px-5 py-2.5 text-sm text-slate-500 cursor-not-allowed" title="Coming soon">Suppliers</span>
         <span class="block px-5 py-2.5 text-sm text-slate-500 cursor-not-allowed" title="Coming soon">Reports</span>
 

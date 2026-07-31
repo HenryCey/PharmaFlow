@@ -1,4 +1,4 @@
-{% comment %}Usage: wrap in x-data="{ open: false }" and pass trigger_label + items (list of {label,url}).{% endcomment %}
+{% comment %}Usage: wrap in x-data="{ open: false }" and pass trigger_label + items (list of {label,url,danger}). Set danger=True on an item to render it in red for destructive actions.{% endcomment %}
 <div class="relative inline-block text-left">
     <button @click="open = !open" class="px-3 py-1.5 text-sm rounded-md border border-slate-300 bg-white hover:bg-slate-50">
         {{ trigger_label }}
@@ -6,7 +6,7 @@
     <div x-show="open" @click.outside="open = false" x-cloak
          class="absolute right-0 mt-1 w-44 rounded-md bg-white shadow-lg border border-slate-200 z-10">
         {% for item in items %}
-            <a href="{{ item.url }}" class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">{{ item.label }}</a>
+            <a href="{{ item.url }}" class="block px-4 py-2 text-sm hover:bg-slate-50 {% if item.danger %}text-danger{% else %}text-slate-700{% endif %}">{{ item.label }}</a>
         {% endfor %}
     </div>
 </div>

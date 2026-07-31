@@ -1,0 +1,21 @@
+{% extends "layout/base.html" %}
+{% block page_title %}Cancel Sale{% endblock %}
+{% block content %}
+<div class="max-w-md bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+    <p class="text-sm text-slate-700 mb-4">
+        Cancel <strong>{{ sale.receipt_number }}</strong>? Stock for every
+        item on this sale will be restored, and this action is recorded
+        in the sale's history. This cannot be undone.
+    </p>
+    <form method="post" novalidate>
+        {% csrf_token %}
+        {% include "components/_input.html" with field=form.reason %}
+        <div class="flex gap-2 mt-2">
+            {% include "components/_button.html" with label="Cancel Sale" variant="danger" type="submit" %}
+            <a href="{% url 'sales:sale_detail' sale.pk %}">
+                {% include "components/_button.html" with label="Back" variant="secondary" %}
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}

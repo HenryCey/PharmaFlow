@@ -21,6 +21,22 @@ def _status_badge(obj):
     return _badge(obj.get_status_display(), "success" if obj.status == "active" else "neutral")
 
 
+def _actions_dropdown(items):
+    """
+    Renders a compact "Actions ▾" menu for a table row, reusing the
+    existing _dropdown.html component instead of concatenating inline
+    links — a narrow Actions column with 3-4 inline links wraps onto
+    multiple lines and becomes unreadable (QA-reported: "Adjust Stock"
+    wrapped so badly it looked like "View Stock"). _dropdown.html
+    expects its caller to supply the Alpine `open` state, since the
+    component itself doesn't declare x-data.
+    """
+    dropdown_html = render_to_string(
+        "components/_dropdown.html", {"trigger_label": "Actions", "items": items}
+    )
+    return mark_safe(f'<div x-data="{{ open: false }}">{dropdown_html}</div>')
+
+
 # ---------------------------------------------------------------------------
 # Shared lookup-table CRUD (Categories, Manufacturers, Dosage Forms, Units)
 #
@@ -325,19 +341,20 @@ class DrugListView(PharmaFlowPermissionMixin, ListView):
                     f'{stock_cell} {_badge("Low Stock", "warning")}</span>'
                 )
 
-            actions = [
-                f'<a href="{reverse_lazy("inventory:drug_detail", args=[drug.pk])}" '
-                f'class="text-primary hover:underline mr-3">View</a>'
+            action_items = [
+                {"label": "View", "url": reverse_lazy("inventory:drug_detail", args=[drug.pk])},
             ]
+            if self.request.user.has_perm("stock.add_stockadjustment"):
+                action_items.append(
+                    {"label": "Adjust Stock", "url": reverse_lazy("stock:adjustment_create", args=[drug.pk])}
+                )
             if can_change:
-                actions.append(
-                    f'<a href="{reverse_lazy("inventory:drug_update", args=[drug.pk])}" '
-                    f'class="text-primary hover:underline mr-3">Edit</a>'
+                action_items.append(
+                    {"label": "Edit", "url": reverse_lazy("inventory:drug_update", args=[drug.pk])}
                 )
             if can_delete:
-                actions.append(
-                    f'<a href="{reverse_lazy("inventory:drug_delete", args=[drug.pk])}" '
-                    f'class="text-danger hover:underline">Discontinue</a>'
+                action_items.append(
+                    {"label": "Discontinue", "url": reverse_lazy("inventory:drug_delete", args=[drug.pk]), "danger": True}
                 )
 
             rows.append([
@@ -348,7 +365,7 @@ class DrugListView(PharmaFlowPermissionMixin, ListView):
                 f"{drug.selling_price}",
                 stock_cell,
                 _badge(drug.get_status_display(), status_variants.get(drug.status, "neutral")),
-                mark_safe("".join(actions)),
+                _actions_dropdown(action_items),
             ])
 
         context["table_headers"] = [
@@ -382,6 +399,15 @@ class DrugDetailView(PharmaFlowPermissionMixin, DetailView):
     template_name = "inventory/drug_detail.html"
     context_object_name = "drug"
     permission_required = "inventory.view_drug"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Movement history lives on the Drug detail page rather than a
+        # separate `stock` module page — stock is shared infrastructure,
+        # not a standalone sidebar module (see Sprint 3 Implementation Plan).
+        context["movements"] = self.object.movements.select_related("user")[:20]
+        context["can_adjust_stock"] = self.request.user.has_perm("stock.add_stockadjustment")
+        return context
 
 
 class DrugCreateView(PharmaFlowPermissionMixin, SuccessMessageMixin, CreateView):

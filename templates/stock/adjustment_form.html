@@ -1,0 +1,28 @@
+{% extends "layout/base.html" %}
+{% block page_title %}Adjust Stock — {{ drug.name }}{% endblock %}
+{% block content %}
+<div class="max-w-lg bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+    <p class="text-sm text-slate-500 mb-4">
+        Current stock: <strong class="text-slate-700">{{ drug.current_stock }}</strong> {{ drug.unit.name }}
+    </p>
+    {% if is_zero_stock %}
+    <div class="bg-primary/5 border border-primary/20 rounded-md px-3 py-2 mb-4 text-sm text-slate-700">
+        This drug has no stock yet. Record its <strong>Opening Stock</strong> below before it can be sold at POS.
+    </div>
+    {% endif %}
+    <form method="post" novalidate>
+        {% csrf_token %}
+        {% include "components/_input.html" with field=form.adjustment_type %}
+        {% include "components/_input.html" with field=form.direction %}
+        {% include "components/_input.html" with field=form.quantity helper="Enter a positive amount — Direction above determines add vs. remove." %}
+        {% include "components/_input.html" with field=form.reason %}
+
+        <div class="flex gap-2 mt-4">
+            {% include "components/_button.html" with label="Record Adjustment" variant="primary" type="submit" %}
+            <a href="{% url 'inventory:drug_detail' drug.pk %}">
+                {% include "components/_button.html" with label="Cancel" variant="secondary" %}
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}

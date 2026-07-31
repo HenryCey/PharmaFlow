@@ -1,0 +1,63 @@
+{% extends "layout/base.html" %}
+{% block page_title %}Sales History{% endblock %}
+{% block content %}
+<div class="flex items-center justify-between mb-4">
+    <h2 class="text-lg font-semibold text-slate-900">Sales History</h2>
+    <a href="{% url 'sales:pos' %}">
+        {% include "components/_button.html" with label="New Sale" variant="primary" %}
+    </a>
+</div>
+
+<div class="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
+    <table class="w-full text-sm">
+        <thead class="bg-slate-50">
+            <tr class="text-left text-slate-500 border-b border-slate-200">
+                <th class="px-4 py-3">Receipt #</th>
+                <th class="px-4 py-3">Date</th>
+                <th class="px-4 py-3">Customer</th>
+                <th class="px-4 py-3">Cashier</th>
+                <th class="px-4 py-3">Total</th>
+                <th class="px-4 py-3">Status</th>
+                <th class="px-4 py-3">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for sale in sales %}
+            <tr class="border-b border-slate-100">
+                <td class="px-4 py-3">{{ sale.receipt_number }}</td>
+                <td class="px-4 py-3 text-slate-500">{{ sale.created_at|date:"Y-m-d H:i" }}</td>
+                <td class="px-4 py-3">{{ sale.customer.name|default:"Walk-in" }}</td>
+                <td class="px-4 py-3 text-slate-500">{{ sale.cashier.get_full_name }}</td>
+                <td class="px-4 py-3">{{ sale.total }}</td>
+                <td class="px-4 py-3">
+                    {% if sale.status == "cancelled" %}
+                        {% include "components/_badge.html" with label="Cancelled" variant="danger" %}
+                    {% else %}
+                        {% include "components/_badge.html" with label="Completed" variant="success" %}
+                    {% endif %}
+                </td>
+                <td class="px-4 py-3">
+                    <a href="{% url 'sales:sale_detail' sale.pk %}" class="text-primary hover:underline">View</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="7" class="px-4 py-8 text-center text-slate-500">No sales recorded yet.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% if page_obj %}
+<div class="flex justify-center mt-4 gap-2 text-sm">
+    {% if page_obj.has_previous %}
+    <a href="?page={{ page_obj.previous_page_number }}" class="text-primary hover:underline">Previous</a>
+    {% endif %}
+    <span class="text-slate-500">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+    {% if page_obj.has_next %}
+    <a href="?page={{ page_obj.next_page_number }}" class="text-primary hover:underline">Next</a>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}

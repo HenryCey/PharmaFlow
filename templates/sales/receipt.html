@@ -1,0 +1,82 @@
+{% extends "layout/base.html" %}
+{% block page_title %}Receipt — {{ sale.receipt_number }}{% endblock %}
+{% block content %}
+<style>
+    /* Print styles stay separate from screen styles per the UI Contract.
+       Scoped to #receipt-content only, so printing never includes the
+       sidebar/header chrome — this is the first printable template in
+       the project; no shared print stylesheet exists yet to extend. */
+    @media print {
+        body * { visibility: hidden; }
+        #receipt-content, #receipt-content * { visibility: visible; }
+        #receipt-content { position: absolute; top: 0; left: 0; width: 100%; }
+        #receipt-content.format-thermal { width: 80mm; font-size: 11px; }
+        #receipt-content.format-a4 { width: 210mm; font-size: 13px; }
+        .no-print { display: none !important; }
+    }
+</style>
+
+<div class="no-print flex items-center justify-between mb-4">
+    <h2 class="text-lg font-semibold text-slate-900">Receipt — {{ sale.receipt_number }}</h2>
+    <div class="flex gap-2" x-data="{}">
+        <button onclick="document.getElementById('receipt-content').className='format-thermal'; window.print();"
+                class="inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50">
+            Print (Thermal)
+        </button>
+        <button onclick="document.getElementById('receipt-content').className='format-a4'; window.print();"
+                class="inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50">
+            Print (A4)
+        </button>
+        <a href="{% url 'sales:sale_detail' sale.pk %}">
+            {% include "components/_button.html" with label="Back" variant="secondary" %}
+        </a>
+    </div>
+</div>
+
+<div id="receipt-content" class="format-a4 bg-white rounded-lg shadow-sm border border-slate-200 p-6 max-w-md mx-auto">
+    <div class="text-center mb-4">
+        {% if pharmacy.pharmacy_name %}<p class="font-semibold text-slate-900">{{ pharmacy.pharmacy_name }}</p>{% endif %}
+        {% if pharmacy.address %}<p class="text-xs text-slate-500">{{ pharmacy.address }}</p>{% endif %}
+        {% if pharmacy.phone %}<p class="text-xs text-slate-500">{{ pharmacy.phone }}</p>{% endif %}
+    </div>
+
+    <div class="text-xs text-slate-500 mb-3 flex justify-between">
+        <span>{{ sale.receipt_number }}</span>
+        <span>{{ sale.created_at|date:"Y-m-d H:i" }}</span>
+    </div>
+    <p class="text-xs text-slate-500 mb-3">Customer: {{ sale.customer.name|default:"Walk-in" }} &middot; Cashier: {{ sale.cashier.get_full_name }}</p>
+
+    <table class="w-full text-xs mb-3">
+        <thead>
+            <tr class="text-left border-b border-slate-200">
+                <th class="py-1">Item</th>
+                <th class="py-1">Qty</th>
+                <th class="py-1">Price</th>
+                <th class="py-1 text-right">Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td class="py-1">{{ item.drug.name }}</td>
+                <td class="py-1">{{ item.quantity }}</td>
+                <td class="py-1">{{ pharmacy.currency_symbol }}{{ item.unit_price }}</td>
+                <td class="py-1 text-right">{{ pharmacy.currency_symbol }}{{ item.line_total }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="border-t border-slate-200 pt-2 text-sm">
+        {% if sale.discount %}
+        <div class="flex justify-between text-xs text-slate-500"><span>Discount</span><span>-{{ pharmacy.currency_symbol }}{{ sale.discount }}</span></div>
+        {% endif %}
+        <div class="flex justify-between font-semibold"><span>Total</span><span>{{ pharmacy.currency_symbol }}{{ sale.total }}</span></div>
+        <div class="text-xs text-slate-500 mt-1">Payment: {{ sale.get_payment_method_display }}</div>
+    </div>
+
+    {% if pharmacy.receipt_footer_note %}
+    <p class="text-center text-xs text-slate-400 mt-4">{{ pharmacy.receipt_footer_note }}</p>
+    {% endif %}
+</div>
+{% endblock %}

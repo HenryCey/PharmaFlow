@@ -1,0 +1,41 @@
+<div id="cart-panel" class="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
+    <h3 class="text-sm font-semibold text-slate-900 mb-3">Cart</h3>
+
+    {% if cart_lines %}
+    <div class="divide-y divide-slate-100">
+        {% for line in cart_lines %}
+        <div class="py-2">
+            <div class="flex items-center justify-between">
+                <p class="text-sm font-medium text-slate-900">{{ line.drug.name }}</p>
+                <button hx-post="{% url 'sales:cart_remove' line.drug.pk %}" hx-target="#cart-panel" hx-swap="outerHTML"
+                        type="button" class="text-xs text-danger hover:underline">Remove</button>
+            </div>
+            <div class="flex items-center justify-between mt-1">
+                <input type="number" min="0" step="any" value="{{ line.quantity }}" name="quantity"
+                       hx-post="{% url 'sales:cart_update' line.drug.pk %}" hx-trigger="change" hx-target="#cart-panel" hx-swap="outerHTML"
+                       class="w-16 rounded-md border border-slate-300 px-2 py-1 text-xs">
+                <span class="text-xs text-slate-500">{{ line.unit_price }} each</span>
+                <span class="text-sm font-medium text-slate-900">{{ line.line_total }}</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="flex items-center justify-between mt-3 pt-3 border-t border-slate-200">
+        <span class="text-sm font-semibold text-slate-900">Subtotal</span>
+        <span class="text-sm font-semibold text-slate-900">{{ cart_subtotal }}</span>
+    </div>
+
+    <div class="flex gap-2 mt-3">
+        <a href="{% url 'sales:checkout' %}" class="flex-1">
+            {% include "components/_button.html" with label="Checkout" variant="primary" %}
+        </a>
+        <button hx-post="{% url 'sales:cart_clear' %}" hx-target="#cart-panel" hx-swap="outerHTML" type="button"
+                class="inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50">
+            Clear
+        </button>
+    </div>
+    {% else %}
+    <p class="text-sm text-slate-500">Cart is empty. Search for a drug to add it.</p>
+    {% endif %}
+</div>

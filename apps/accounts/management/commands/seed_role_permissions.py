@@ -12,6 +12,7 @@ idempotent, so re-running is always safe:
 """
 from django.contrib.auth.models import Permission
 from django.core.management.base import BaseCommand
+from django.db.models import Q
 
 from apps.accounts.models import Role, User
 
@@ -24,6 +25,38 @@ _INVENTORY_FULL_ACCESS = [
     for action in ("add", "change", "delete", "view")
 ]
 
+# Sprint 3: stock is shared infrastructure (see Sprint 3 Implementation
+# Plan) — Cashier gets none of this, matching the Permissions Matrix.
+_STOCK_MANAGE_ACCESS = [
+    ("stock", "add_stockadjustment"),
+    ("stock", "view_stockadjustment"),
+    ("stock", "view_inventorymovement"),
+]
+
+_CUSTOMERS_FULL_ACCESS = [
+    ("customers", f"{action}_customer") for action in ("add", "change", "delete", "view")
+]
+# Cashier: view/create only, no delete — per the Permissions Matrix.
+_CUSTOMERS_CASHIER_ACCESS = [
+    ("customers", "add_customer"),
+    ("customers", "view_customer"),
+]
+
+# `change_sale`/`delete_sale` are Django's auto-created defaults but no
+# view anywhere uses them (a Sale is only ever created via checkout or
+# cancelled via cancel_sale) — deliberately not granted to anyone but
+# Owner, so no role appears to have a capability the UI never exposes.
+_SALES_FULL_ACCESS = [
+    ("sales", "add_sale"),
+    ("sales", "view_sale"),
+    ("sales", "cancel_sale"),
+    ("sales", "view_all_sales"),
+]
+_SALES_CASHIER_ACCESS = [
+    ("sales", "add_sale"),
+    ("sales", "view_sale"),
+]
+
 ADMINISTRATOR_PERMS = [
     ("accounts", "manage_users"),
     ("accounts", "manage_roles"),
@@ -32,14 +65,25 @@ ADMINISTRATOR_PERMS = [
     ("settings_app", "change_numberingsequence"),
     ("settings_app", "view_numberingsequence"),
     *_INVENTORY_FULL_ACCESS,
+    *_STOCK_MANAGE_ACCESS,
+    *_CUSTOMERS_FULL_ACCESS,
+    *_SALES_FULL_ACCESS,
 ]
 # Pharmacist: "Handles inventory, sales and drug-related workflows" (Blueprint)
-# — full inventory management, no user/role/settings access.
-PHARMACIST_PERMS = [*_INVENTORY_FULL_ACCESS]
+# — full inventory/stock/customer/sales management, no user/role/settings access.
+PHARMACIST_PERMS = [
+    *_INVENTORY_FULL_ACCESS,
+    *_STOCK_MANAGE_ACCESS,
+    *_CUSTOMERS_FULL_ACCESS,
+    *_SALES_FULL_ACCESS,
+]
 # Cashier: "Handles point-of-sale transactions only" (Blueprint) — read-only
-# drug lookup only, needed to search/sell a drug once POS (Sprint 3) exists.
+# drug lookup, own-sales-only POS/history (row-level scoping is enforced in
+# sales_service.get_sales_queryset, not by permission), and no stock access.
 CASHIER_PERMS = [
     ("inventory", "view_drug"),
+    *_CUSTOMERS_CASHIER_ACCESS,
+    *_SALES_CASHIER_ACCESS,
 ]
 
 
@@ -61,10 +105,18 @@ class Command(BaseCommand):
             if not role:
                 self.stdout.write(self.style.WARNING(f"{role_name}: role not found, skipped."))
                 continue
-            perms = Permission.objects.filter(
-                content_type__app_label__in={a for a, _ in perm_list},
-                codename__in={c for _, c in perm_list},
-            ) if perm_list else Permission.objects.none()
+            if perm_list:
+                # Bug fix: the previous independent app_label__in / codename__in
+                # filters matched any (app_label, codename) cross-product, not
+                # exact pairs — harmless only because no codename happened to
+                # collide across apps yet. Built as proper OR-of-exact-pairs
+                # now that more apps exist.
+                query = Q()
+                for app_label, codename in perm_list:
+                    query |= Q(content_type__app_label=app_label, codename=codename)
+                perms = Permission.objects.filter(query)
+            else:
+                perms = Permission.objects.none()
             role.group.permissions.set(perms)
             self.stdout.write(self.style.SUCCESS(f"{role_name}: {perms.count()} permissions assigned."))
 

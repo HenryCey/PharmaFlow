@@ -1,0 +1,49 @@
+{% extends "layout/base.html" %}
+{% block page_title %}Checkout{% endblock %}
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-2 bg-white rounded-lg shadow-sm border border-slate-200 p-4">
+        <h3 class="text-sm font-semibold text-slate-900 mb-3">Order Summary</h3>
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="text-left text-slate-500 border-b border-slate-200">
+                    <th class="py-2 pr-4">Drug</th>
+                    <th class="py-2 pr-4">Qty</th>
+                    <th class="py-2 pr-4">Unit Price</th>
+                    <th class="py-2">Line Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for line in cart_lines %}
+                <tr class="border-b border-slate-100">
+                    <td class="py-2 pr-4">{{ line.drug.name }}</td>
+                    <td class="py-2 pr-4">{{ line.quantity }}</td>
+                    <td class="py-2 pr-4">{{ line.unit_price }}</td>
+                    <td class="py-2">{{ line.line_total }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <div class="flex items-center justify-between mt-3 pt-3 border-t border-slate-200">
+            <span class="text-sm font-semibold text-slate-900">Subtotal</span>
+            <span class="text-sm font-semibold text-slate-900">{{ cart_subtotal }}</span>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+        <form method="post" novalidate>
+            {% csrf_token %}
+            {% include "components/_input.html" with field=form.customer helper="Leave as Walk-in Customer if none." %}
+            {% include "components/_input.html" with field=form.payment_method %}
+            {% include "components/_input.html" with field=form.discount %}
+
+            <div class="flex gap-2 mt-4">
+                {% include "components/_button.html" with label="Complete Sale" variant="primary" type="submit" %}
+                <a href="{% url 'sales:pos' %}">
+                    {% include "components/_button.html" with label="Back to POS" variant="secondary" %}
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,67 @@
+{% extends "layout/base.html" %}
+{% block page_title %}{{ customer.name }}{% endblock %}
+{% block content %}
+<div class="flex items-center justify-between mb-4">
+    <div>
+        <h2 class="text-lg font-semibold text-slate-900">{{ customer.name }}</h2>
+        <p class="text-sm text-slate-500">{{ customer.phone }}</p>
+    </div>
+    <div class="flex gap-2">
+        {% if perms.customers.change_customer %}
+        <a href="{% url 'customers:customer_update' customer.pk %}">
+            {% include "components/_button.html" with label="Edit" variant="secondary" %}
+        </a>
+        {% endif %}
+        <a href="{% url 'customers:customer_list' %}">
+            {% include "components/_button.html" with label="Back to Customers" variant="secondary" %}
+        </a>
+    </div>
+</div>
+
+<div class="bg-white rounded-lg shadow-sm border border-slate-200 p-6 mb-6">
+    <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 text-sm">
+        <div>
+            <dt class="text-slate-500">Phone</dt>
+            <dd class="text-slate-900 font-medium">{{ customer.phone }}</dd>
+        </div>
+        <div>
+            <dt class="text-slate-500">Address</dt>
+            <dd class="text-slate-900 font-medium">{{ customer.address|default:"—" }}</dd>
+        </div>
+        <div>
+            <dt class="text-slate-500">Customer Since</dt>
+            <dd class="text-slate-900 font-medium">{{ customer.created_at|date:"Y-m-d" }}</dd>
+        </div>
+    </dl>
+</div>
+
+<div class="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+    <h3 class="text-sm font-semibold text-slate-900 mb-3">Purchase History</h3>
+    {% if recent_sales %}
+    <table class="w-full text-sm">
+        <thead>
+            <tr class="text-left text-slate-500 border-b border-slate-200">
+                <th class="py-2 pr-4">Receipt #</th>
+                <th class="py-2 pr-4">Date</th>
+                <th class="py-2 pr-4">Total</th>
+                <th class="py-2">Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for sale in recent_sales %}
+            <tr class="border-b border-slate-100">
+                <td class="py-2 pr-4">
+                    <a href="{% url 'sales:sale_detail' sale.pk %}" class="text-primary hover:underline">{{ sale.receipt_number }}</a>
+                </td>
+                <td class="py-2 pr-4 text-slate-500">{{ sale.created_at|date:"Y-m-d H:i" }}</td>
+                <td class="py-2 pr-4">{{ sale.total }}</td>
+                <td class="py-2 text-slate-500">{{ sale.get_status_display }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="text-sm text-slate-500">No purchases yet.</p>
+    {% endif %}
+</div>
+{% endblock %}
