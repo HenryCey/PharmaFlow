@@ -22,12 +22,15 @@ from apps.common.models import TimeStampedModel
 MOVEMENT_SALE = "sale"
 MOVEMENT_SALE_CANCELLATION = "sale_cancellation"
 MOVEMENT_ADJUSTMENT = "adjustment"
+MOVEMENT_PURCHASE = "purchase"
 MOVEMENT_TYPE_CHOICES = [
     (MOVEMENT_SALE, "Sale"),
     (MOVEMENT_SALE_CANCELLATION, "Sale Cancellation"),
     (MOVEMENT_ADJUSTMENT, "Adjustment"),
-    # "purchase" is intentionally not listed yet — added when the
-    # Purchases module ships and becomes the third writer into this ledger.
+    (MOVEMENT_PURCHASE, "Purchase"),
+    # Purchase Returns are part of the long-term inventory lifecycle but
+    # not built this sprint — a "purchase_return" movement type would be
+    # added alongside that feature, not preemptively here.
 ]
 
 ADJUSTMENT_OPENING_STOCK = "opening_stock"

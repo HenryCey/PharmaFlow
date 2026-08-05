@@ -9,6 +9,7 @@ input[type="email"],
 input[type="password"],
 input[type="tel"],
 input[type="number"],
+input[type="date"],
 textarea,
 select {
     border: 1px solid #cbd5e1;

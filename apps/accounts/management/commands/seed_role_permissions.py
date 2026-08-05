@@ -57,6 +57,37 @@ _SALES_CASHIER_ACCESS = [
     ("sales", "view_sale"),
 ]
 
+# Sprint 4. `change_purchaseorder`/`delete_purchaseorder` aren't Django
+# auto-created no-ops here the way Sale's are — change_purchaseorder is
+# genuinely used (editing a Draft order), delete_purchaseorder isn't used
+# anywhere (Purchase Orders are cancelled, never hard-deleted) so it's
+# deliberately left ungranted to everyone but Owner, same reasoning as
+# Sale's change/delete_sale.
+_SUPPLIERS_FULL_ACCESS = [
+    ("suppliers", f"{action}_supplier") for action in ("add", "change", "delete", "view")
+]
+_PURCHASES_ADMIN_ACCESS = [
+    ("purchases", "add_purchaseorder"),
+    ("purchases", "change_purchaseorder"),
+    ("purchases", "view_purchaseorder"),
+    ("purchases", "receive_purchaseorder"),
+    ("purchases", "cancel_purchaseorder"),
+]
+# Pharmacist per the Sprint 4 Build Request's Permissions section:
+# "Create Purchases / Receive Purchases / View Suppliers" — notably not
+# "Cancel Purchases" or "Manage Suppliers". The Build Request doesn't
+# explicitly list view/change either, but "Create Purchases" is
+# meaningless without being able to see and edit the Draft you just
+# created, so those two are included; cancel_purchaseorder and any
+# supplier CRUD beyond view are deliberately excluded, matching the
+# explicit list. Flagged for confirmation in the Sprint 4 summary.
+_PURCHASES_PHARMACIST_ACCESS = [
+    ("purchases", "add_purchaseorder"),
+    ("purchases", "change_purchaseorder"),
+    ("purchases", "view_purchaseorder"),
+    ("purchases", "receive_purchaseorder"),
+]
+
 ADMINISTRATOR_PERMS = [
     ("accounts", "manage_users"),
     ("accounts", "manage_roles"),
@@ -68,18 +99,26 @@ ADMINISTRATOR_PERMS = [
     *_STOCK_MANAGE_ACCESS,
     *_CUSTOMERS_FULL_ACCESS,
     *_SALES_FULL_ACCESS,
+    *_SUPPLIERS_FULL_ACCESS,
+    *_PURCHASES_ADMIN_ACCESS,
 ]
 # Pharmacist: "Handles inventory, sales and drug-related workflows" (Blueprint)
 # — full inventory/stock/customer/sales management, no user/role/settings access.
+# Sprint 4: Suppliers is view-only, Purchases per _PURCHASES_PHARMACIST_ACCESS
+# above (no cancel) — a deliberate narrowing versus every other module this
+# role otherwise fully manages, per the Sprint 4 Build Request's explicit list.
 PHARMACIST_PERMS = [
     *_INVENTORY_FULL_ACCESS,
     *_STOCK_MANAGE_ACCESS,
     *_CUSTOMERS_FULL_ACCESS,
     *_SALES_FULL_ACCESS,
+    ("suppliers", "view_supplier"),
+    *_PURCHASES_PHARMACIST_ACCESS,
 ]
 # Cashier: "Handles point-of-sale transactions only" (Blueprint) — read-only
 # drug lookup, own-sales-only POS/history (row-level scoping is enforced in
 # sales_service.get_sales_queryset, not by permission), and no stock access.
+# Sprint 4: "No Purchase Access" — no suppliers/purchases permissions at all.
 CASHIER_PERMS = [
     ("inventory", "view_drug"),
     *_CUSTOMERS_CASHIER_ACCESS,

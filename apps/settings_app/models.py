@@ -67,6 +67,7 @@ class NumberingSequence(TimeStampedModel):
         ("sale_receipt", "Sale Receipt"),
         ("invoice", "Invoice"),
         ("purchase_order", "Purchase Order"),
+        ("supplier_code", "Supplier Code"),
     ]
 
     document_type = models.CharField(max_length=30, choices=DOCUMENT_TYPE_CHOICES, unique=True)

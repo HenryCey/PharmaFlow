@@ -6,9 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}PharmaFlow{% endblock %}</title>
 
-    {% include "layout/partials/_tailwind_cdn.html" %}
-    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
-    <script defer src="https://unpkg.com/alpinejs@3.13.5/dist/cdn.min.js"></script>
+    {% include "layout/partials/_tailwind.html" %}
+    <script src="{% static 'vendor/htmx.min.js' %}"></script>
+    <script defer src="{% static 'vendor/alpinejs.min.js' %}"></script>
     <link rel="stylesheet" href="{% static 'css/app.css' %}">
 </head>
 <body class="h-full font-sans text-slate-800" x-data="{ sidebarOpen: true }"

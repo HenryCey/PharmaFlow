@@ -1,0 +1,114 @@
+{% extends "layout/base.html" %}
+{% block page_title %}{{ purchase.purchase_number }}{% endblock %}
+{% block content %}
+<div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+    <div>
+        <h2 class="text-lg font-semibold text-slate-900">{{ purchase.purchase_number }}</h2>
+        <p class="text-sm text-slate-500">{{ purchase.supplier.company_name }} &middot; {{ purchase.purchase_date }}</p>
+    </div>
+    <div class="flex gap-2 flex-wrap">
+        <a href="{% url 'purchases:purchase_print' purchase.pk %}">
+            {% include "components/_button.html" with label="Print" variant="secondary" %}
+        </a>
+        {% if purchase.is_editable and perms.purchases.change_purchaseorder %}
+        <a href="{% url 'purchases:purchase_update' purchase.pk %}">
+            {% include "components/_button.html" with label="Edit" variant="secondary" %}
+        </a>
+        <form method="post" action="{% url 'purchases:purchase_place_order' purchase.pk %}">
+            {% csrf_token %}
+            {% include "components/_button.html" with label="Place Order" variant="primary" type="submit" %}
+        </form>
+        {% endif %}
+        {% if purchase.status == "draft" or purchase.status == "ordered" %}
+            {% if perms.purchases.receive_purchaseorder %}
+            <form method="post" action="{% url 'purchases:purchase_receive' purchase.pk %}">
+                {% csrf_token %}
+                {% include "components/_button.html" with label="Receive Purchase" variant="primary" type="submit" %}
+            </form>
+            {% endif %}
+            {% if perms.purchases.cancel_purchaseorder %}
+            <a href="{% url 'purchases:purchase_cancel' purchase.pk %}">
+                {% include "components/_button.html" with label="Cancel" variant="danger" %}
+            </a>
+            {% endif %}
+        {% endif %}
+        <a href="{% url 'purchases:purchase_list' %}">
+            {% include "components/_button.html" with label="Back to Purchases" variant="secondary" %}
+        </a>
+    </div>
+</div>
+
+<div class="bg-white rounded-lg shadow-sm border border-slate-200 p-6 mb-6">
+    <dl class="grid grid-cols-1 sm:grid-cols-3 gap-x-8 gap-y-4 text-sm">
+        <div>
+            <dt class="text-slate-500">Status</dt>
+            <dd class="text-slate-900 font-medium">{{ purchase.get_status_display }}</dd>
+        </div>
+        <div>
+            <dt class="text-slate-500">Expected Delivery</dt>
+            <dd class="text-slate-900 font-medium">{{ purchase.expected_delivery|default:"—" }}</dd>
+        </div>
+        <div>
+            <dt class="text-slate-500">Created By</dt>
+            <dd class="text-slate-900 font-medium">{{ purchase.created_by.get_full_name }}</dd>
+        </div>
+        {% if purchase.status == "received" %}
+        <div>
+            <dt class="text-slate-500">Received By</dt>
+            <dd class="text-slate-900 font-medium">{{ purchase.received_by.get_full_name|default:"—" }}</dd>
+        </div>
+        <div>
+            <dt class="text-slate-500">Received At</dt>
+            <dd class="text-slate-900 font-medium">{{ purchase.received_at|date:"Y-m-d H:i" }}</dd>
+        </div>
+        {% endif %}
+        {% if purchase.status == "cancelled" %}
+        <div class="sm:col-span-3">
+            <dt class="text-slate-500">Cancellation Reason</dt>
+            <dd class="text-slate-900">{{ purchase.cancellation_reason }}</dd>
+            <dd class="text-xs text-slate-400 mt-1">Cancelled by {{ purchase.cancelled_by.get_full_name|default:"—" }} on {{ purchase.cancelled_at|date:"Y-m-d H:i" }}</dd>
+        </div>
+        {% endif %}
+        {% if purchase.notes %}
+        <div class="sm:col-span-3">
+            <dt class="text-slate-500">Notes</dt>
+            <dd class="text-slate-900">{{ purchase.notes }}</dd>
+        </div>
+        {% endif %}
+    </dl>
+</div>
+
+<div class="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+    <h3 class="text-sm font-semibold text-slate-900 mb-3">Items</h3>
+    <table class="w-full text-sm">
+        <thead>
+            <tr class="text-left text-slate-500 border-b border-slate-200">
+                <th class="py-2 pr-4">Drug</th>
+                <th class="py-2 pr-4">Batch</th>
+                <th class="py-2 pr-4">Expiry</th>
+                <th class="py-2 pr-4">Qty</th>
+                <th class="py-2 pr-4">Unit Cost</th>
+                <th class="py-2">Subtotal</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in purchase.items.all %}
+            <tr class="border-b border-slate-100">
+                <td class="py-2 pr-4">{{ item.drug.name }}</td>
+                <td class="py-2 pr-4 text-slate-500">{{ item.batch_number|default:"—" }}</td>
+                <td class="py-2 pr-4 text-slate-500">{{ item.expiry_date|default:"—" }}</td>
+                <td class="py-2 pr-4">{{ item.quantity }}</td>
+                <td class="py-2 pr-4">{{ item.unit_cost }}</td>
+                <td class="py-2">{{ item.subtotal }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <div class="mt-3 pt-3 border-t border-slate-200 text-sm space-y-1 max-w-xs ml-auto">
+        <div class="flex justify-between"><span class="text-slate-500">Subtotal</span><span>{{ purchase.subtotal }}</span></div>
+        <div class="flex justify-between"><span class="text-slate-500">Tax</span><span>{{ purchase.tax }}</span></div>
+        <div class="flex justify-between"><span class="text-slate-500">Discount</span><span>-{{ purchase.discount }}</span></div>
+        <div class="flex justify-between font-semibold border-t border-slate-200 pt-1"><span>Grand Total</span><span>{{ purchase.grand_total }}</span></div>
+    </div>
+</div>
+{% endblock %}

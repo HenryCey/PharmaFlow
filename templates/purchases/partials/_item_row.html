@@ -1,0 +1,29 @@
+{% comment %}
+Usage: {% include "purchases/partials/_item_row.html" with form=form %}
+Reused for both real formset forms AND formset.empty_form (whose fields
+use "__prefix__" as a placeholder index, replaced by JS when a new row
+is cloned in) — keeping one partial for both means the two never drift
+out of visual sync.
+
+QA polish (Sprint 4): fields were too compressed, and Expiry Date was
+squeezed into a 1/12-width column while Manufacturing Date got an
+awkward full-width row of its own. Rebuilt as two clearer rows with more
+breathing room, same fields, no layout redesign otherwise.
+{% endcomment %}
+<div class="item-row border-b border-slate-200 py-5 mb-2">
+    <div class="grid grid-cols-12 gap-4 items-start">
+        <div class="col-span-12 sm:col-span-4">{% include "components/_searchable_select.html" with field=form.drug placeholder="Search drug name, SKU..." %}</div>
+        <div class="col-span-6 sm:col-span-2">{% include "components/_input.html" with field=form.quantity %}</div>
+        <div class="col-span-6 sm:col-span-2">{% include "components/_input.html" with field=form.unit_cost %}</div>
+        <div class="col-span-6 sm:col-span-2">{% include "components/_input.html" with field=form.selling_price %}</div>
+        <div class="col-span-6 sm:col-span-2 pt-6 text-right">
+            <button type="button" onclick="removePurchaseItemRow(this)" class="text-xs text-danger hover:underline">Remove</button>
+            <span class="hidden">{{ form.DELETE }}</span>
+        </div>
+    </div>
+    <div class="grid grid-cols-12 gap-4 items-start mt-1">
+        <div class="col-span-12 sm:col-span-4">{% include "components/_input.html" with field=form.batch_number %}</div>
+        <div class="col-span-6 sm:col-span-4">{% include "components/_input.html" with field=form.manufacturing_date %}</div>
+        <div class="col-span-6 sm:col-span-4">{% include "components/_input.html" with field=form.expiry_date %}</div>
+    </div>
+</div>

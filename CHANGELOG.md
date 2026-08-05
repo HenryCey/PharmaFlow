@@ -5,6 +5,72 @@ All notable changes to PharmaFlow are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.3.0] - 2026-08-04
+
+Sprint 4 (Purchasing & Supplier Management) — official release. Completes the inventory lifecycle Sprint 3 left half-finished: Supplier → Purchase Order → Goods Receipt → Inventory Ledger. Sprint 1–3 continue to work exactly as before; every change to already-released files was additive wiring or a targeted bug fix (see Fixed, below).
+
+**Architecture note:** two new apps this sprint — `apps/suppliers` and `apps/purchases` — matching the original Technical Architecture's app split. Receiving a Purchase Order writes to the same `InventoryMovement` ledger Sales already uses (a new `purchase` movement type extends `stock`, per the Sprint 3 comment that anticipated exactly this), never touching `Drug.current_stock` directly. No existing module was redesigned to make room for this.
+
+### Added
+
+- **`apps/suppliers`**: full CRUD (Supplier Name, Contact Person, Phone, Email, Address, City, State, Country, Status, Notes), soft-deletable. Auto-generated Supplier Code, reusing the existing `NumberingSequence` service (a new `supplier_code` sequence, added via additive migrations — the historical seed migration was never edited). Detail page shows Purchase History, Total Purchases, Outstanding Purchases, and Last Purchase.
+- **`apps/purchases`**: `PurchaseOrder`/`PurchaseItem` with a full Draft → Ordered → Received/Cancelled lifecycle. Business logic split per the established pattern: `purchase_service.py` (lifecycle — create/edit Draft, Place Order, Cancel — never touches the ledger) and `receiving_service.py` (the one action that does).
+- **Batch tracking**: each Purchase Item carries Batch Number, Manufacturing Date, Expiry Date, Unit Cost, and Selling Price — laying groundwork for future expiry management (see Known Limitations).
+- **Multi-item Purchase Order form**: a Django formset with Alpine-driven dynamic row add/remove, plus a true live-filtering searchable Drug selector (type-to-filter, click to select — see Fixed for the two rounds of bugs this went through).
+- **Purchase Order actions dropdown** on the list view, status-driven exactly per spec (Draft: View/Edit/Place Order/Cancel; Ordered: View/Receive/Print; Received/Cancelled: View/Print) — reuses the existing `_dropdown.html` component from Sprint 3's Drug List redesign.
+- **Printable Purchase Order** (on-screen + browser print), following the same scoped-print-CSS pattern as Sales' receipt.
+- **Recently Received Stock** operational report — a lightweight, non-BI list of recently received purchase items, per Sprint 4's explicit "operational reports only" scope.
+- Sidebar: "Purchases" (Purchase Orders / Recently Received) and "Suppliers" are now real, permission-gated entries.
+- `seed_role_permissions` extended: Administrator gets full access to both new apps; Pharmacist gets Create/Edit/Receive Purchases and view-only Suppliers (no Cancel, no Supplier management) — an intentional narrowing versus every other module this role otherwise fully manages, per the Build Request's explicit permissions list; Cashier gets no access to either app.
+- **Offline-first static assets**: Tailwind CSS is now compiled ahead of time into a single local `static/css/tailwind.css` (via a real, offline Tailwind CLI build scanning every template *and* every `apps/**/*.py` file, since some views construct Tailwind-classed HTML directly in Python) instead of loading `cdn.tailwindcss.com` at runtime — matching what the original Technical Architecture always specified. HTMX and Alpine.js are now bundled directly as `static/vendor/htmx.min.js` and `static/vendor/alpinejs.min.js` — no CDN, no manual download step, works immediately on a fully offline pharmacy LAN. See Known Limitations for the one version-pinning caveat.
+- New `_searchable_select.html` shared component: a reusable live-filtering combobox wrapper for any `<select>` field, without altering the underlying select's name/id/options/value — Django form parsing and POST data are unaffected by design.
+- New `FUTURE_ENHANCEMENTS.md` backlog, documenting the "Last Cost Wins" costing decision (see Known Limitations) as the first entry.
+
+### Changed
+
+- **Drug list Actions column** (Sprint 3) — no change this sprint; mentioned here only because Purchase Order's new Actions dropdown directly reuses that same pattern/component.
+- **`Drug.objects` uniqueness checks**: `DrugForm` and `CustomerForm` now validate SKU/Barcode/Phone uniqueness explicitly against `all_objects` instead of relying solely on Django's built-in `validate_unique()` — see Fixed, below, for why.
+
+### Fixed
+
+Issues found and corrected across five QA rounds this sprint, before this version was tagged:
+
+- **Formset display bug**: `min_num=1` combined with `extra=1` on the Purchase Item formset would have shown 2 blank rows on a new Purchase Order instead of 1 (Django adds these counts together in `total_form_count()`). Fixed by removing `min_num` and enforcing "at least one item" via a custom formset `clean()` instead.
+- **Formset row-removal bug**: the original "Remove" button deleted a row's DOM node entirely, which — for an *existing* (already-saved) item during editing — strips its required fields from POST and triggers validation errors instead of a clean deletion. Fixed to use the formset's real `DELETE` checkbox (hide + check), matching why Django's `can_delete` mechanism exists in the first place.
+- **Migration drift on `stock`**: `InventoryMovement.Meta.indexes` had no explicit `name=`, so Django auto-computed a hash-based index name at migration-check time that didn't match the human-readable name manually written into the hand-crafted migration. Fixed by naming the index explicitly in the model — same root-cause shape as prior sprints' Meta-options drift, this time for `indexes`.
+- **Duplicate SKU/Barcode/Phone produced a raw `IntegrityError`, not a friendly message.** Root cause: `Drug.objects`/`Customer.objects` (the default manager Django's `validate_unique()` uses) are alive-only (`SoftDeleteManager`) — a discontinued/deleted record's SKU, barcode, or phone is invisible to that check but still occupies the real DB constraint, so the check passed and the raw constraint violation surfaced instead. Fixed with explicit checks against `Drug.all_objects` / `Customer.all_objects` in each form's `clean_<field>()`.
+- **Expired stock could be received into inventory.** Business rule enforced at the earliest point (`PurchaseItemLineForm.clean_expiry_date()`): `expiry_date <= today` is rejected with a friendly message — tightened from an initial `<` to the correct `<=` after a QA round caught that a batch expiring *today* was still being accepted.
+- **Three separate nested-`<button>` bugs** (Clear Cart, both Receipt Print buttons, and the Purchase Item "+ Add Item" button) — same bug class as Sprint 2's original Filter button fix: a `<button>` wrapping another `<button>` via the shared `_button.html` component is invalid HTML, and browsers auto-close the outer (behavior-carrying) element when the parser hits the inner one. Fixed by rendering these buttons directly instead of wrapping the component. **A project-wide scan confirms zero nested-button instances remain anywhere in the codebase.**
+- **Searchable Drug Selector — two rounds of real bugs, not asset-loading issues:**
+  1. Initial version required Enter/a visible Search button and didn't filter live — rebuilt as a true combobox (type → live-filtered dropdown → click to select, `Enter` explicitly prevented from submitting the form) while keeping the real `<select>` completely unchanged for 100% POST-structure compatibility.
+  2. After that rebuild, clicking a filtered result did nothing. Root cause: Alpine's `$el` magic property resolves to *whichever element the current directive is declared on*, not a fixed reference to the component's root — `choose()`/`revert()` were being invoked from directives on nested descendant elements (a dropdown item; the `.relative` wrapper), so `this.$el.querySelector('select')` found nothing there and silently failed. Fixed by caching the select element once in `init()` (where `$el` is guaranteed correct) as a plain object property, referenced everywhere else instead of re-deriving via `$el`.
+- **Offline asset loading**: the application silently lost all CSS/JS styling and interactivity whenever the pharmacy's LAN had no internet access, because Tailwind, HTMX, and Alpine.js were all loaded from external CDNs. Fixed as described in Added, above — genuinely bundled, not just reconfigured to point at a still-missing local path.
+- **Purchase Item layout**: fields were visually compressed, and Expiry Date was squeezed into a 1/12-width column while Manufacturing Date awkwardly took a full-width row of its own. Rebuilt into two clearer, evenly-spaced rows — no fields added or removed, no other layout changes.
+- **Purchase Orders list discoverability**: after saving a Draft, there was no obvious way back to it besides knowing the Purchase Number itself was a clickable link. Fixed via the new Actions dropdown (see Added).
+
+### Improvements
+
+- **Opening Stock UX**: the Adjust Stock form (Sprint 3) now defaults Adjustment Type to Opening Stock and shows a contextual helper message when a drug's current stock is exactly 0 — reduces friction during initial inventory setup. (Carried over from a Sprint 4 QA round; noted here since it shipped alongside this release.)
+- **"Company Name" → "Supplier Name"**: form label only — `company_name` remains the real field/column name, so no migration was needed. Not every supplier is a registered company (e.g. "Blessing Ventures", "Ngozi Drug Depot").
+- **Country defaults to Nigeria** on the Supplier form (form-level `initial=`, not a model `default=`, which would have required its own migration) — still fully editable.
+
+### Known Limitations
+
+- **"Last Cost Wins" costing method** — receiving a Purchase Order overwrites `Drug.cost_price`/`selling_price` with the most recently received batch's values, rather than a weighted average, FIFO, or supplier-specific pricing. Deliberate, documented Sprint 4 scope decision — see `FUTURE_ENHANCEMENTS.md` for the full writeup and recommended future work (Weighted Average Cost, FIFO, batch-aware/FEFO selling at POS).
+- **Vendored JS version note**: `static/vendor/htmx.min.js` and `alpinejs.min.js` are htmx 1.9.10 and Alpine 3.10.5 — the closest versions independently retrievable and verified in the build environment, rather than the originally-pinned 1.9.12/3.13.5. Same public API; nothing in this codebase depends on version-specific behavior between these releases. See `static/vendor/README.md`. A drop-in file swap if the exact pinned versions are ever needed.
+- Manual Batch Number entry only — no auto-generation or barcode scanner integration for batches (explicitly deferred per the Build Request; acceptable for this sprint).
+- Purchase Returns are part of the long-term inventory lifecycle but not built this sprint — the ledger's `movement_type` intentionally does not yet include a `purchase_return` value; it will be added alongside that feature when it ships.
+- Same Sprint 2/3 limitations still apply where unaffected by this sprint (hard-delete on lookup tables, no barcode imaging, no full Reports engine — still Sprint 5+ scope, no Global Search — still deferred, no PDF/WeasyPrint receipt or Purchase Order export).
+
+### Upgrade Notes
+
+```bash
+python manage.py migrate
+python manage.py seed_role_permissions
+```
+
+No destructive schema changes. `seed_role_permissions` remains idempotent and safe to re-run. If deploying to an existing environment with `collectstatic` in the pipeline, re-run it once so the newly bundled `static/vendor/` and `static/css/tailwind.css` files are picked up.
+
 ## [v1.2.0] - 2026-07-29
 
 Sprint 3 (Sales Module) delivery per the Sprint 3 Implementation Plan. Sprint 1/2 continue to work exactly as before — no existing module was redesigned; every change to already-released files was additive wiring or a targeted bug fix (see Fixed, below).

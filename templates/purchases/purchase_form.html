@@ -1,0 +1,80 @@
+{% extends "layout/base.html" %}
+{% block page_title %}{% if object %}Edit Purchase Order{% else %}New Purchase Order{% endif %}{% endblock %}
+{% block content %}
+{% if object %}
+<p class="text-sm text-slate-500 mb-4">Purchase Number: <strong class="text-slate-700">{{ object.purchase_number }}</strong> (Draft — items can still be edited)</p>
+{% endif %}
+
+<form method="post" novalidate>
+    {% csrf_token %}
+
+    <div class="bg-white rounded-lg shadow-sm border border-slate-200 p-6 mb-6">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-x-4">
+            {% include "components/_input.html" with field=form.supplier %}
+            {% include "components/_input.html" with field=form.purchase_date %}
+            {% include "components/_input.html" with field=form.expected_delivery %}
+            {% include "components/_input.html" with field=form.tax %}
+            {% include "components/_input.html" with field=form.discount %}
+        </div>
+        {% include "components/_input.html" with field=form.notes %}
+    </div>
+
+    <div class="bg-white rounded-lg shadow-sm border border-slate-200 p-6 mb-6">
+        <div class="flex items-center justify-between mb-3">
+            <h3 class="text-sm font-semibold text-slate-900">Items</h3>
+            <button type="button" onclick="addPurchaseItemRow()"
+                    class="inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium bg-white border border-slate-300 text-slate-700 hover:bg-slate-50">
+                + Add Item
+            </button>
+        </div>
+
+        {{ formset.management_form }}
+        {% if formset.non_form_errors %}
+        <p class="text-xs text-danger mb-2">{{ formset.non_form_errors.0 }}</p>
+        {% endif %}
+
+        <div id="item-rows">
+            {% for item_form in formset %}
+                {% include "purchases/partials/_item_row.html" with form=item_form %}
+            {% endfor %}
+        </div>
+
+        <template id="empty-form-template">
+            {% include "purchases/partials/_item_row.html" with form=formset.empty_form %}
+        </template>
+    </div>
+
+    <div class="flex gap-2">
+        {% include "components/_button.html" with label="Save Draft" variant="primary" type="submit" %}
+        <a href="{% if object %}{% url 'purchases:purchase_detail' object.pk %}{% else %}{% url 'purchases:purchase_list' %}{% endif %}">
+            {% include "components/_button.html" with label="Cancel" variant="secondary" %}
+        </a>
+    </div>
+</form>
+
+<script>
+    function addPurchaseItemRow() {
+        const totalForms = document.getElementById('id_form-TOTAL_FORMS');
+        const idx = parseInt(totalForms.value, 10);
+        const template = document.getElementById('empty-form-template').innerHTML.replace(/__prefix__/g, idx);
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = template.trim();
+        document.getElementById('item-rows').appendChild(wrapper.firstElementChild);
+        totalForms.value = idx + 1;
+    }
+
+    function removePurchaseItemRow(button) {
+        // Root-cause-aware: never remove the row's fields from the DOM —
+        // an existing (initial) row's required fields must stay present
+        // in POST or Django re-validates it as "changed to blank" and
+        // raises required-field errors instead of treating it as
+        // deleted. Check the formset's own DELETE checkbox and hide the
+        // row visually instead — safe for both existing and newly added
+        // (extra) rows.
+        const row = button.closest('.item-row');
+        const checkbox = row.querySelector('input[type="checkbox"][name$="-DELETE"]');
+        if (checkbox) { checkbox.checked = true; }
+        row.style.display = 'none';
+    }
+</script>
+{% endblock %}

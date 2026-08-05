@@ -1,0 +1,23 @@
+{% extends "layout/base.html" %}
+{% block page_title %}Suppliers{% endblock %}
+{% block content %}
+<div class="flex items-center justify-between mb-4 gap-2 flex-wrap">
+    <form method="get" class="flex gap-2 items-center">
+        <input type="search" name="q" value="{{ search_query }}" placeholder="Search code, company, phone..."
+               class="w-64 rounded-md border border-slate-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+        <select name="status" onchange="this.form.submit()" class="rounded-md border border-slate-300 px-2 py-1.5 text-sm">
+            <option value="">All Statuses</option>
+            <option value="active" {% if selected_status == "active" %}selected{% endif %}>Active</option>
+            <option value="inactive" {% if selected_status == "inactive" %}selected{% endif %}>Inactive</option>
+        </select>
+        {% include "components/_button.html" with label="Search" variant="secondary" type="submit" %}
+    </form>
+    {% if add_url %}
+    <a href="{{ add_url }}">
+        {% include "components/_button.html" with label="Add Supplier" variant="primary" %}
+    </a>
+    {% endif %}
+</div>
+
+{% include "components/_table.html" with headers=table_headers rows=table_rows page_obj=page_obj empty_message="No suppliers found." empty_action_label="Add First Supplier" empty_action_url=add_url %}
+{% endblock %}

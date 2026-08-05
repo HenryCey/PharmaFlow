@@ -1,0 +1,78 @@
+{% comment %}
+Usage: {% include "components/_searchable_select.html" with field=form.drug placeholder="Search drugs..." %}
+
+True live-filtering combobox. The real <select> is visually hidden but
+otherwise completely unchanged — same name, id, options, and value — so
+Django's form parsing, validation, and submitted POST data are 100%
+unaffected. All filtering/selection state lives in this component's own
+x-data; it reads the select's own options at init (no separate JSON
+needed), so it works correctly even inside JS-cloned formset rows
+(Alpine auto-initializes newly inserted DOM nodes).
+
+Bug fix (QA final round): $el resolves to whichever element the CURRENT
+directive is declared on, not a fixed reference to the x-data root —
+using `this.$el.querySelector('select')` inside choose()/revert() (called
+from directives on nested descendant elements) was finding nothing,
+since $el there pointed at a dropdown item or the .relative wrapper, not
+the root that actually contains the <select>. Fixed by caching the
+select element ONCE in init() (where $el is guaranteed correct) as a
+plain object property, and using that cached reference everywhere else.
+{% endcomment %}
+<div class="mb-4"
+     x-data="{
+        open: false,
+        query: '',
+        options: [],
+        selectEl: null,
+        init() {
+            this.selectEl = this.$el.querySelector('select');
+            this.options = Array.from(this.selectEl.options)
+                .filter(o => o.value)
+                .map(o => ({ value: o.value, label: o.textContent.trim() }));
+            const current = this.options.find(o => o.value === this.selectEl.value);
+            this.query = current ? current.label : '';
+        },
+        get filtered() {
+            const q = this.query.trim().toLowerCase();
+            return q ? this.options.filter(o => o.label.toLowerCase().includes(q)) : this.options;
+        },
+        choose(opt) {
+            this.selectEl.value = opt.value;
+            this.query = opt.label;
+            this.open = false;
+        },
+        revert() {
+            this.open = false;
+            const current = this.options.find(o => o.value === this.selectEl.value);
+            this.query = current ? current.label : '';
+        }
+     }"
+     x-init="init()">
+    <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-slate-700 mb-1">
+        {{ field.label }}{% if field.field.required %} <span class="text-danger">*</span>{% endif %}
+    </label>
+    <div class="relative" @click.outside="revert()">
+        <input type="text"
+               x-model="query"
+               @focus="open = true; $event.target.select()"
+               @input="open = true"
+               @keydown.enter.prevent
+               @keydown.escape="revert()"
+               autocomplete="off"
+               placeholder="{{ placeholder|default:'Type to search...' }}"
+               class="mb-0">
+        <div x-show="open" x-cloak
+             class="absolute z-20 mt-1 w-full max-h-56 overflow-y-auto rounded-md bg-white shadow-lg border border-slate-200">
+            <template x-for="opt in filtered" :key="opt.value">
+                <div @click="choose(opt)" x-text="opt.label"
+                     class="px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 cursor-pointer"></div>
+            </template>
+            <div x-show="filtered.length === 0" class="px-3 py-2 text-sm text-slate-400">No matches found.</div>
+        </div>
+    </div>
+    <div class="hidden">{{ field }}</div>
+    {% if helper %}<p class="mt-1 text-xs text-slate-500">{{ helper }}</p>{% endif %}
+    {% for error in field.errors %}
+        <p class="mt-1 text-xs text-danger">{{ error }}</p>
+    {% endfor %}
+</div>

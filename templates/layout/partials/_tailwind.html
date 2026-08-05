@@ -1,0 +1,21 @@
+{% load static %}
+{% comment %}
+Pre-compiled Tailwind CSS — offline-safe (Sprint 4 QA fix).
+
+This used to load https://cdn.tailwindcss.com, the runtime JIT compiler,
+which meant PharmaFlow silently lost ALL styling whenever the pharmacy's
+LAN had no internet access (the CDN script simply failed to load, and
+with it went every utility class in the app). Also violated the original
+Technical Architecture's own stated intent: "Tailwind CSS (pre-compiled,
+no Node needed at runtime)".
+
+This file is now compiled ahead of time (Tailwind CLI, content-scanning
+every template AND every apps/**/*.py file, since several views build
+Tailwind-classed HTML directly in Python — see _badge()/_actions_dropdown()
+helpers) into a single static, purged CSS file. No JS, no network, no
+Node needed at request time — matches the architecture as originally
+specified. See static/css/tailwind.css and the build notes in
+FUTURE_ENHANCEMENTS.md for how to regenerate it if new utility classes
+are ever added.
+{% endcomment %}
+<link rel="stylesheet" href="{% static 'css/tailwind.css' %}">

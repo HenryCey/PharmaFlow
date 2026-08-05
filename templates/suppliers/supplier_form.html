@@ -1,0 +1,31 @@
+{% extends "layout/base.html" %}
+{% block page_title %}{% if object %}Edit Supplier{% else %}Add Supplier{% endif %}{% endblock %}
+{% block content %}
+<div class="max-w-2xl bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+    {% if object %}
+    <p class="text-sm text-slate-500 mb-4">Supplier Code: <strong class="text-slate-700">{{ object.supplier_code }}</strong></p>
+    {% endif %}
+    <form method="post" novalidate>
+        {% csrf_token %}
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
+            {% include "components/_input.html" with field=form.company_name %}
+            {% include "components/_input.html" with field=form.contact_person %}
+            {% include "components/_input.html" with field=form.phone %}
+            {% include "components/_input.html" with field=form.email %}
+            {% include "components/_input.html" with field=form.city %}
+            {% include "components/_input.html" with field=form.state %}
+            {% include "components/_input.html" with field=form.country %}
+            {% include "components/_input.html" with field=form.status %}
+        </div>
+        {% include "components/_input.html" with field=form.address %}
+        {% include "components/_input.html" with field=form.notes %}
+
+        <div class="flex gap-2 mt-2">
+            {% include "components/_button.html" with label="Save" variant="primary" type="submit" %}
+            <a href="{% url 'suppliers:supplier_list' %}">
+                {% include "components/_button.html" with label="Cancel" variant="secondary" %}
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}
