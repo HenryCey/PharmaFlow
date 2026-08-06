@@ -1,18 +1,301 @@
 {% extends "layout/base.html" %}
+{% load static humanize %}
 {% block page_title %}Dashboard{% endblock %}
-{% block content %}
-<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-    {% include "components/_card.html" with title="Today's Sales" value="\u20140" description="Coming soon" %}
-    {% include "components/_card.html" with title="Low Stock Items" value="\u20140" description="Coming soon" %}
-    {% include "components/_card.html" with title="Expiring Soon" value="\u20140" description="Coming soon" %}
-    {% include "components/_card.html" with title="Active Users" value=active_user_count %}
-</div>
 
-<div class="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+{% block content %}
+<div class="mb-6">
     <h2 class="text-sm font-semibold text-slate-900 mb-1">Welcome, {{ request.user.get_short_name }}.</h2>
     <p class="text-sm text-slate-500">
         You're logged in as <strong>{{ request.user.role.name|default:"an unassigned role" }}</strong>.
-        Inventory, Sales and Reports light up as their sprints are completed.
+        Here's how the pharmacy is doing today.
     </p>
 </div>
+
+{# ---------- KPI Cards ---------- #}
+{# Every card below is gated on `"<key>" in kpis` (key PRESENCE), not on #}
+{# the value's truthiness — DashboardService only adds a key to `kpis` at #}
+{# all when the user holds the relevant permission (see dashboard_service #}
+{# .py's docstring for the full permission map), so a legitimate zero #}
+{# value is never mistaken for "not permitted". #}
+{# Money cards are built manually (same classes as components/_card.html) #}
+{# rather than through the include, since _card.html's single `value` slot #}
+{# has no way to compose a currency symbol with a formatted number — see #}
+{# the component's own "for arbitrary HTML body content, wrap manually" note. #}
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    {% if "todays_sales_revenue" in kpis %}
+    <div class="bg-white rounded-lg shadow-sm border border-slate-200 p-5">
+        <p class="text-sm text-slate-500">Today's Sales</p>
+        <p class="text-2xl font-semibold text-slate-900 mt-1">{{ pharmacy_settings.currency_symbol }}{{ kpis.todays_sales_revenue|floatformat:2|intcomma }}</p>
+        {% if kpis.todays_sales_count %}
+        <p class="text-xs text-slate-400 mt-1">{{ kpis.todays_sales_count }} transaction{{ kpis.todays_sales_count|pluralize }}</p>
+        {% else %}
+        <p class="text-xs text-slate-400 mt-1">No sales recorded today.</p>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% if "todays_purchases_cost" in kpis %}
+    <div class="bg-white rounded-lg shadow-sm border border-slate-200 p-5">
+        <p class="text-sm text-slate-500">Today's Purchases</p>
+        <p class="text-2xl font-semibold text-slate-900 mt-1">{{ pharmacy_settings.currency_symbol }}{{ kpis.todays_purchases_cost|floatformat:2|intcomma }}</p>
+        {% if kpis.todays_purchases_count %}
+        <p class="text-xs text-slate-400 mt-1">{{ kpis.todays_purchases_count }} order{{ kpis.todays_purchases_count|pluralize }} received</p>
+        {% else %}
+        <p class="text-xs text-slate-400 mt-1">No purchases recorded today.</p>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% if "inventory_value" in kpis %}
+    <div class="bg-white rounded-lg shadow-sm border border-slate-200 p-5">
+        <p class="text-sm text-slate-500">Inventory Value</p>
+        <p class="text-2xl font-semibold text-slate-900 mt-1">{{ pharmacy_settings.currency_symbol }}{{ kpis.inventory_value|floatformat:2|intcomma }}</p>
+        <p class="text-xs text-slate-400 mt-1">{{ kpis.inventory_quantity|floatformat:0 }} units in stock</p>
+    </div>
+    {% endif %}
+
+    {% if financial %}
+    <div class="bg-white rounded-lg shadow-sm border border-slate-200 p-5">
+        <p class="text-sm text-slate-500">Est. Gross Profit (Today)</p>
+        <p class="text-2xl font-semibold {% if financial.estimated_gross_profit < 0 %}text-red-600{% else %}text-slate-900{% endif %} mt-1">{{ pharmacy_settings.currency_symbol }}{{ financial.estimated_gross_profit|floatformat:2|intcomma }}</p>
+        <p class="text-xs text-slate-400 mt-1">Revenue minus estimated cost</p>
+    </div>
+    {% endif %}
+
+    {% if "total_customers" in kpis %}
+        {% include "components/_card.html" with title="Total Customers" value=kpis.total_customers %}
+    {% endif %}
+    {% if "total_suppliers" in kpis %}
+        {% include "components/_card.html" with title="Total Suppliers" value=kpis.total_suppliers %}
+    {% endif %}
+    {% if "low_stock_count" in kpis %}
+        {% include "components/_card.html" with title="Low Stock Drugs" value=kpis.low_stock_count description="At or below reorder level" %}
+    {% endif %}
+    {% if "near_expiry_count" in kpis %}
+        {% if kpis.near_expiry_count %}
+            {% include "components/_card.html" with title="Near Expiry Drugs" value=kpis.near_expiry_count description="Batch expiring within 30 days" %}
+        {% else %}
+            {% include "components/_card.html" with title="Near Expiry Drugs" value=0 description="No drugs expiring within 30 days." %}
+        {% endif %}
+    {% endif %}
+</div>
+
+{% if "out_of_stock_count" in kpis and kpis.out_of_stock_count %}
+<div class="bg-red-50 border border-red-200 rounded-lg px-4 py-3 mb-6 flex items-center justify-between">
+    <p class="text-sm text-red-800">
+        <strong>{{ kpis.out_of_stock_count }}</strong> drug{{ kpis.out_of_stock_count|pluralize }} currently out of stock.
+    </p>
+    <a href="{% url 'inventory:drug_list' %}" class="text-sm font-medium text-red-800 hover:underline">View drug inventory</a>
+</div>
+{% endif %}
+
+{# ---------- Charts ---------- #}
+{# Only rendered for a role that can see at least one chart; each chart's #}
+{# canvas/data/init script is a single self-contained unit gated on the #}
+{# same context key dashboard_service only adds when permitted, so an #}
+{# un-permitted chart's dataset is never queried (Task 6) nor sent to the #}
+{# browser (its json_script tag simply doesn't exist). #}
+{% if sales_trend or purchase_trend or inventory_distribution %}
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+    {% if sales_trend %}
+    <div class="bg-white rounded-lg shadow-sm border border-slate-200 p-5">
+        <p class="text-sm font-semibold text-slate-900 mb-3">Sales Trend (Last 7 Days)</p>
+        <div class="relative" style="height:260px">
+            <canvas id="salesTrendChart"></canvas>
+        </div>
+    </div>
+    {{ sales_trend|json_script:"sales-trend-data" }}
+    {% endif %}
+
+    {% if purchase_trend %}
+    <div class="bg-white rounded-lg shadow-sm border border-slate-200 p-5">
+        <p class="text-sm font-semibold text-slate-900 mb-3">Purchase Trend (Last 7 Days)</p>
+        <div class="relative" style="height:260px">
+            <canvas id="purchaseTrendChart"></canvas>
+        </div>
+    </div>
+    {{ purchase_trend|json_script:"purchase-trend-data" }}
+    {% endif %}
+
+    {% if sales_trend %}
+    <div class="bg-white rounded-lg shadow-sm border border-slate-200 p-5">
+        <p class="text-sm font-semibold text-slate-900 mb-3">Top Selling Drugs (Last 30 Days)</p>
+        <div class="relative" style="height:260px">
+            <canvas id="topDrugsChart"></canvas>
+        </div>
+    </div>
+    {{ top_drugs|json_script:"top-drugs-data" }}
+    {% endif %}
+
+    {% if inventory_distribution %}
+    <div class="bg-white rounded-lg shadow-sm border border-slate-200 p-5">
+        <p class="text-sm font-semibold text-slate-900 mb-3">Inventory Distribution by Category</p>
+        <div class="relative" style="height:260px">
+            <canvas id="inventoryDistributionChart"></canvas>
+        </div>
+    </div>
+    {{ inventory_distribution|json_script:"inventory-distribution-data" }}
+    {% endif %}
+</div>
+{% endif %}
+
+{# ---------- Recent Activity ---------- #}
+{# `activity` only ever contains keys the user is permitted to see (see #}
+{# dashboard_service.recent_activity); the column count adapts to how many #}
+{# widgets that leaves, so a Cashier's single "Recent Sales" panel gets the #}
+{# full row width instead of floating at one-third size in an empty row. #}
+{% with visible_activity_count=activity|length %}
+{% if visible_activity_count %}
+<div class="grid grid-cols-1 {% if visible_activity_count == 2 %}lg:grid-cols-2{% elif visible_activity_count >= 3 %}lg:grid-cols-3{% endif %} gap-4">
+    {% if "recent_sales" in activity %}
+    <div class="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
+        <div class="px-4 py-3 border-b border-slate-200">
+            <p class="text-sm font-semibold text-slate-900">Recent Sales</p>
+        </div>
+        <ul class="divide-y divide-slate-100">
+            {% for sale in activity.recent_sales %}
+            <li class="px-4 py-3 flex items-center justify-between text-sm">
+                <div>
+                    <p class="text-slate-800 font-medium">{{ sale.receipt_number }}</p>
+                    <p class="text-slate-400 text-xs">{{ sale.customer.name|default:"Walk-in" }} &middot; {{ sale.created_at|naturaltime }}</p>
+                </div>
+                <span class="text-slate-700 font-medium">{{ pharmacy_settings.currency_symbol }}{{ sale.total|floatformat:2|intcomma }}</span>
+            </li>
+            {% empty %}
+            <li class="px-4 py-6 text-center text-sm text-slate-500">No recent sales.</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    {% if "recent_purchases" in activity %}
+    <div class="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
+        <div class="px-4 py-3 border-b border-slate-200">
+            <p class="text-sm font-semibold text-slate-900">Recent Purchases</p>
+        </div>
+        <ul class="divide-y divide-slate-100">
+            {% for purchase in activity.recent_purchases %}
+            <li class="px-4 py-3 flex items-center justify-between text-sm">
+                <div>
+                    <p class="text-slate-800 font-medium">{{ purchase.purchase_number }}</p>
+                    <p class="text-slate-400 text-xs">{{ purchase.supplier.company_name }} &middot; {{ purchase.status|title }}</p>
+                </div>
+                <span class="text-slate-700 font-medium">{{ pharmacy_settings.currency_symbol }}{{ purchase.grand_total|floatformat:2|intcomma }}</span>
+            </li>
+            {% empty %}
+            <li class="px-4 py-6 text-center text-sm text-slate-500">No recent purchases.</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    {% if "recent_movements" in activity %}
+    <div class="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
+        <div class="px-4 py-3 border-b border-slate-200">
+            <p class="text-sm font-semibold text-slate-900">Recent Inventory Movements</p>
+        </div>
+        <ul class="divide-y divide-slate-100">
+            {% for movement in activity.recent_movements %}
+            <li class="px-4 py-3 flex items-center justify-between text-sm">
+                <div>
+                    <p class="text-slate-800 font-medium">{{ movement.drug.name }}</p>
+                    <p class="text-slate-400 text-xs">{{ movement.get_movement_type_display }} &middot; {{ movement.created_at|naturaltime }}</p>
+                </div>
+                <span class="font-medium {% if movement.quantity < 0 %}text-red-600{% else %}text-green-600{% endif %}">
+                    {{ movement.quantity|floatformat:0 }}
+                </span>
+            </li>
+            {% empty %}
+            <li class="px-4 py-6 text-center text-sm text-slate-500">No stock movements recorded yet.</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+{% endwith %}
+{% endblock %}
+
+{% block extra_js %}
+{% if sales_trend or purchase_trend or inventory_distribution %}
+<script src="{% static 'vendor/chart.umd.min.js' %}"></script>
+<script>
+(function () {
+    const primary = "#0f766e";
+    const warning = "#d97706";
+    const palette = ["#0f766e", "#16a34a", "#d97706", "#dc2626", "#6366f1", "#0891b2"];
+
+    function chartData(elementId) {
+        const el = document.getElementById(elementId);
+        return el ? JSON.parse(el.textContent) : null;
+    }
+
+    const salesTrend = chartData("sales-trend-data");
+    const purchaseTrend = chartData("purchase-trend-data");
+    const topDrugs = chartData("top-drugs-data");
+    const inventoryDistribution = chartData("inventory-distribution-data");
+
+    if (salesTrend) {
+        new Chart(document.getElementById("salesTrendChart"), {
+            type: "line",
+            data: {
+                labels: salesTrend.labels,
+                datasets: [{
+                    label: "Revenue",
+                    data: salesTrend.data,
+                    borderColor: primary,
+                    backgroundColor: primary,
+                    tension: 0.3,
+                    fill: false,
+                }],
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } },
+        });
+    }
+
+    if (purchaseTrend) {
+        new Chart(document.getElementById("purchaseTrendChart"), {
+            type: "line",
+            data: {
+                labels: purchaseTrend.labels,
+                datasets: [{
+                    label: "Purchase Cost",
+                    data: purchaseTrend.data,
+                    borderColor: warning,
+                    backgroundColor: warning,
+                    tension: 0.3,
+                    fill: false,
+                }],
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } },
+        });
+    }
+
+    if (topDrugs) {
+        new Chart(document.getElementById("topDrugsChart"), {
+            type: "bar",
+            data: {
+                labels: topDrugs.labels,
+                datasets: [{ label: "Units Sold", data: topDrugs.data, backgroundColor: primary }],
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false, indexAxis: "y",
+                plugins: { legend: { display: false } },
+            },
+        });
+    }
+
+    if (inventoryDistribution) {
+        new Chart(document.getElementById("inventoryDistributionChart"), {
+            type: "doughnut",
+            data: {
+                labels: inventoryDistribution.labels,
+                datasets: [{ data: inventoryDistribution.data, backgroundColor: palette }],
+            },
+            options: { responsive: true, maintainAspectRatio: false },
+        });
+    }
+})();
+</script>
+{% endif %}
 {% endblock %}

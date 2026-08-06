@@ -88,6 +88,25 @@ _PURCHASES_PHARMACIST_ACCESS = [
     ("purchases", "receive_purchaseorder"),
 ]
 
+# Sprint 5. Not specified by any Build Request received so far — flagged
+# for confirmation, same as the Sprint 4 Pharmacist/Purchases note above.
+# Administrator gets every report category (owner-adjacent, per the
+# Blueprint's role list). Pharmacist gets the operational reports that
+# mirror what they already manage day to day (inventory, sales) but not
+# Purchases (view-only elsewhere, per _PURCHASES_PHARMACIST_ACCESS) or
+# Financial (profit/cost figures, management-facing). Cashier gets none —
+# "Handles point-of-sale transactions only" per the Blueprint.
+_REPORTS_ADMIN_ACCESS = [
+    ("reports", "view_inventory_reports"),
+    ("reports", "view_sales_reports"),
+    ("reports", "view_purchase_reports"),
+    ("reports", "view_financial_reports"),
+]
+_REPORTS_PHARMACIST_ACCESS = [
+    ("reports", "view_inventory_reports"),
+    ("reports", "view_sales_reports"),
+]
+
 ADMINISTRATOR_PERMS = [
     ("accounts", "manage_users"),
     ("accounts", "manage_roles"),
@@ -101,6 +120,7 @@ ADMINISTRATOR_PERMS = [
     *_SALES_FULL_ACCESS,
     *_SUPPLIERS_FULL_ACCESS,
     *_PURCHASES_ADMIN_ACCESS,
+    *_REPORTS_ADMIN_ACCESS,
 ]
 # Pharmacist: "Handles inventory, sales and drug-related workflows" (Blueprint)
 # — full inventory/stock/customer/sales management, no user/role/settings access.
@@ -114,6 +134,7 @@ PHARMACIST_PERMS = [
     *_SALES_FULL_ACCESS,
     ("suppliers", "view_supplier"),
     *_PURCHASES_PHARMACIST_ACCESS,
+    *_REPORTS_PHARMACIST_ACCESS,
 ]
 # Cashier: "Handles point-of-sale transactions only" (Blueprint) — read-only
 # drug lookup, own-sales-only POS/history (row-level scoping is enforced in

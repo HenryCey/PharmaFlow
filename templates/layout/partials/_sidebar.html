@@ -32,11 +32,18 @@
         </a>
 
         {% comment %}
-        Sales / Purchases / Customers / Suppliers / Reports remain
-        placeholders until their sprints are built — keeping every nav
-        item from the UI Contract visible now avoids relayout later.
-        Inventory is built as of Sprint 2, so it's a real expandable
-        section instead of a placeholder.
+        Sprint 5 refinement (TESTBUILD v2): nav items for modules the
+        current user has no permission to access are omitted entirely,
+        not shown as a disabled placeholder — the original Sprint 1
+        "keep every item visible to avoid relayout" approach made sense
+        before these modules existed, but now that they're real, showing
+        a permanently-greyed-out label for something the user simply
+        isn't authorized for reads as broken, not "coming soon". Reports
+        is the one genuine "coming soon": no report pages exist yet
+        regardless of permission, so it stays a placeholder — just now
+        only shown to users who hold at least one reports.* permission
+        (`{% templatetag openblock %} if perms.reports {% templatetag closeblock %}`
+        checks module-level permission via Django's built-in PermWrapper).
         {% endcomment %}
         {% if perms.inventory.view_drug %}
         <div x-data="{ open: {% if request.resolver_match.app_name == 'inventory' %}true{% else %}false{% endif %} }">
@@ -71,8 +78,6 @@
                 {% endif %}
             </div>
         </div>
-        {% else %}
-        <span class="block px-5 py-2.5 text-sm text-slate-500 cursor-not-allowed" title="Coming soon">Inventory</span>
         {% endif %}
         {% if perms.sales.add_sale %}
         <div x-data="{ open: {% if request.resolver_match.app_name == 'sales' %}true{% else %}false{% endif %} }">
@@ -95,8 +100,6 @@
                 {% endif %}
             </div>
         </div>
-        {% else %}
-        <span class="block px-5 py-2.5 text-sm text-slate-500 cursor-not-allowed" title="Coming soon">Sales</span>
         {% endif %}
         {% if perms.purchases.view_purchaseorder %}
         <div x-data="{ open: {% if request.resolver_match.app_name == 'purchases' %}true{% else %}false{% endif %} }">
@@ -114,8 +117,6 @@
                           {% if request.path == recently_received_url %}bg-slate-800 text-white{% endif %}">Recently Received</a>
             </div>
         </div>
-        {% else %}
-        <span class="block px-5 py-2.5 text-sm text-slate-500 cursor-not-allowed" title="Coming soon">Purchases</span>
         {% endif %}
         {% if perms.customers.view_customer %}
         <a href="{{ customer_list_url }}"
@@ -123,8 +124,6 @@
                   {% if request.path == customer_list_url %}bg-slate-800 text-white border-l-2 border-primary{% endif %}">
             <span>Customers</span>
         </a>
-        {% else %}
-        <span class="block px-5 py-2.5 text-sm text-slate-500 cursor-not-allowed" title="Coming soon">Customers</span>
         {% endif %}
         {% if perms.suppliers.view_supplier %}
         <a href="{{ supplier_list_url }}"
@@ -132,10 +131,10 @@
                   {% if request.path == supplier_list_url %}bg-slate-800 text-white border-l-2 border-primary{% endif %}">
             <span>Suppliers</span>
         </a>
-        {% else %}
-        <span class="block px-5 py-2.5 text-sm text-slate-500 cursor-not-allowed" title="Coming soon">Suppliers</span>
         {% endif %}
+        {% if perms.reports %}
         <span class="block px-5 py-2.5 text-sm text-slate-500 cursor-not-allowed" title="Coming soon">Reports</span>
+        {% endif %}
 
         {% if perms.accounts.manage_users %}
         <a href="{{ users_url }}"

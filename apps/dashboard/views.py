@@ -1,18 +1,25 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic import TemplateView
 
+from apps.reports.services import dashboard_service
+
 
 class DashboardHomeView(LoginRequiredMixin, TemplateView):
     """
-    Placeholder landing page for Sprint 1. Satisfies the roadmap milestone
-    ("users can log in and navigate the application") without building
-    the real KPI/reporting logic, which belongs to Phase 4 / Sprint 4.
+    Sprint 5: the placeholder landing page from Sprint 1 is replaced with
+    real business statistics. Every figure comes from DashboardService —
+    this view's only job is auth + handing the request's user through for
+    row-level scoping (Cashiers see their own sales in Today's Sales /
+    Recent Sales, same visibility rule Sales History already applies).
+
+    No new permission is required to view the dashboard itself — it's the
+    landing page every role sees after login, per the Blueprint's default
+    roles. The individual Reports pages (Sprint 5, next increment) are
+    where view_*_reports permissions actually gate access.
     """
     template_name = "dashboard/home.html"
 
     def get_context_data(self, **kwargs):
-        from apps.accounts.models import User
-
         context = super().get_context_data(**kwargs)
-        context["active_user_count"] = User.objects.filter(status=User.STATUS_ACTIVE).count()
+        context.update(dashboard_service.dashboard_context(user=self.request.user))
         return context
