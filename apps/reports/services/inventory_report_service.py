@@ -61,6 +61,30 @@ def inventory_valuation(*, category=None):
     return agg
 
 
+def inventory_valuation_by_category():
+    """
+    Sprint 6 (Feature Specs: 'Inventory Valuation' report page needs a
+    breakdown, not just the single aggregate inventory_valuation()
+    already returns for the Dashboard/Financial Summary). Same money
+    expressions as inventory_valuation(), just grouped by category
+    instead of aggregated across the whole catalog.
+    """
+    return (
+        Drug.objects.values("category__id", "category__name")
+        .annotate(
+            drug_count=Count("id"),
+            total_quantity=Coalesce(Sum("current_stock"), Decimal("0")),
+            total_cost_value=Coalesce(
+                Sum(_money(F("current_stock") * F("cost_price"))), Decimal("0")
+            ),
+            total_retail_value=Coalesce(
+                Sum(_money(F("current_stock") * F("selling_price"))), Decimal("0")
+            ),
+        )
+        .order_by("-total_cost_value")
+    )
+
+
 def low_stock_drugs(*, category=None):
     """Reuses apps.inventory.services.low_stock_drugs — the same rule
     already used by the Drug list's Low Stock filter."""

@@ -5,6 +5,57 @@ All notable changes to PharmaFlow are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.5.0] - 2026-08-08
+
+Sprint 6 (Reports Module) — official release. Builds the actual report pages on top of the reporting service layer and permission model Sprint 5 shipped (`apps/reports/services/*`, the four `reports.view_*_reports` permissions) — this sprint adds no new service-layer business logic beyond two small additive aggregates (see Added), only the views/templates/export layer that exposes what was already computed and tested. Went through two internal test builds (TESTBUILD v1: initial implementation; TESTBUILD v2: QA fixes for Excel/PDF export and button styling) before QA approval, per the project's Development → TEST BUILD → QA → Fixes → Final Release workflow. Sprint 1–5 continue to work exactly as before; every change to an already-released file was additive wiring (sidebar, `requirements.txt`) or a targeted bug fix (see Fixed).
+
+**Architecture note:** one new file group under the existing `apps/reports` app — `views.py` (one `BaseReportView` plus 25 thin per-report subclasses), `forms.py` (one reusable `ReportFilterForm`, narrowed per report via a `fields_needed` list), `export_service.py` (a shared CSV/XLSX/PDF export utility any future module can reuse), and `urls.py` — plus two new templates (`reports/report_page.html`, `reports/report_home.html`). No new models, no new permissions: every report page gates on one of the four `reports.view_*_reports` permissions Sprint 5 already created. PDF export was implemented with **ReportLab**, not WeasyPrint — WeasyPrint was the original TESTBUILD v1 implementation but was replaced during this sprint's QA round after it failed on Windows (`cannot load library libgobject-2.0-0`, a native GTK/GObject dependency WeasyPrint requires and ReportLab, being pure Python, does not). WeasyPrint never shipped in a released version; only the ReportLab implementation reached v1.5.0.
+
+### Added
+
+- **25 report pages across the four categories the Blueprint/Feature Specs call for**, plus a Reports Home landing page (26 URLs total under `/reports/`), each permission-gated, filterable, paginated, printable, and exportable:
+  - **Inventory (7):** Current Stock, Low Stock, Near Expiry, Expired Stock, Stock Adjustments, Inventory Movements, Inventory Valuation (with a new per-category breakdown, `inventory_report_service.inventory_valuation_by_category()`).
+  - **Sales (8):** Daily/Weekly/Monthly Sales (one `SalesPeriodReportView`, parameterized by period), Date Range, Sales by Drug, Sales by Customer, Sales by Cashier, Payment Method Summary (a new aggregate, `sales_report_service.payment_method_summary()`).
+  - **Purchases (5):** Purchase History, Purchases by Supplier, Purchases by Drug, Purchase Cost Analysis, Outstanding Purchase Orders.
+  - **Financial (5):** Revenue, Purchase Cost, Estimated Gross Profit, Inventory Value, Average Daily Sales.
+- **Reusable filtering**: one `ReportFilterForm` (date range, drug, category, supplier, customer, cashier, payment method, movement type, adjustment type, purchase status, period, trailing-days) backs every report's filter bar, each report narrowing it to only the fields it needs.
+- **Export**: CSV, Excel (XLSX via `openpyxl`), and PDF (via ReportLab) on every report page, reachable from the same three buttons, carrying whatever filters are currently applied on screen. Export rows are always plain, unformatted values (no currency symbols, no HTML badges) — kept structurally separate from each report's on-screen display rows so a spreadsheet/PDF export never contains rendered markup.
+- **Print-friendly layout**: a scoped `@media print` stylesheet on the report page (screen-only chrome hidden, table content only), following the same pattern already used by Sales receipts and Purchase Orders.
+- **Pagination**: report tables reuse `components/_table.html`'s existing pagination support (25 rows/page) — the UI Contract's "every table supports pagination" requirement, previously not applicable since no report tables existed yet.
+- **Reports Home** (`/reports/`) replaces the Sprint 1–5 "Reports (Coming Soon)" sidebar placeholder with a real, category-grouped navigation page; each category section (and the sidebar link itself) is hidden unless the user holds the corresponding `reports.view_*_reports` permission — no role-name checks anywhere in the gating logic.
+- **`apps/reports/tests/test_views.py`** — 20 new tests against real seeded data (fixture in a new `conftest.py`, deliberately duplicated from `test_services.py`'s own `seeded_pharmacy` rather than extracted out of that already-passing file): permission enforcement per role and per category, report data correctness (low stock, near-expiry day-window filtering, sales-by-drug revenue, payment method totals, purchase status filtering, estimated gross profit), filter validation, CSV/XLSX/PDF export content and validity, export URLs preserving active filters, pagination past 25 rows, and rendered-button style consistency. Combined with Sprint 5's 14 existing tests: **34 tests total, all passing.**
+
+### Changed
+
+- `requirements.txt`: added `openpyxl>=3.1` (Excel export) and `reportlab>=4.0` (PDF export, replacing WeasyPrint — see Architecture note and Fixed).
+- Sidebar: the "Reports (Coming Soon)" placeholder is now a real link to Reports Home, still gated on holding at least one `reports.*` permission (same visibility condition the placeholder already used).
+
+### Fixed
+
+Issues found and corrected across this sprint's two test-build/QA rounds, before this version was tagged:
+
+- **Excel export failed with `ModuleNotFoundError: No module named 'openpyxl'` in the QA environment.** `openpyxl` was already correctly declared in `requirements.txt` from TESTBUILD v1 — this was an environment/installation issue (dependencies not installed after pulling the build), not a missing dependency declaration, and QA confirmed Excel export works correctly after a fresh virtual environment with `pip install -r requirements.txt`. `export_xlsx()` now also raises a clear, actionable error message if this ever recurs, instead of a bare `ModuleNotFoundError`.
+- **PDF export failed on Windows** with a WeasyPrint native-library error (`cannot load library libgobject-2.0-0`). Rather than trying to provision GTK/GObject on Windows, PDF export was rebuilt on ReportLab (pure Python, no native dependency) — see Architecture note.
+- **XLSX export crashed on every trend-based report** (Daily/Weekly/Monthly Sales, Revenue, Purchase Cost Analysis) with `openpyxl` rejecting a timezone-aware `datetime` cell — Django's `Trunc*()` date-grouping annotations return tz-aware datetimes under `USE_TZ=True`, and `openpyxl` has no representation for a UTC offset on a cell. Found during this sprint's own verification (not part of the original QA report), fixed by converting to the pharmacy's local time and dropping tzinfo before writing the cell; covered by a new regression test.
+- **Apply Filters button rendered inconsistently sized against Export CSV/Excel/PDF, Print, and Reset.** The six actions previously mixed a `<button>` nested inside an `<a>` (invalid HTML — an interactive element inside another interactive element) with a bare `<button>` sitting in a flex row alongside taller label+input filter fields. All six now share one literal class string and Apply Filters/Reset were moved into their own row, decoupled from the filter fields' height, guaranteeing identical box sizing regardless of the fields around them.
+- **A multi-line `{# ... #}` Django template comment rendered as literal visible text** on every report page — the same bug class already documented and fixed in `CHANGELOG_1.0.3` for the sidebar (`{# #}` only strips single-line content; multi-line requires `{% comment %}...{% endcomment %}`). Found by diffing raw rendered HTML output rather than trusting template source; both instances fixed, and the whole `templates/reports/` tree was scanned to confirm no others exist.
+
+### Known Limitations
+
+- **Pagination controls don't preserve active filters when navigating between pages.** `components/_table.html`'s built-in `?page=N` links drop whatever filters are currently applied — a pre-existing, app-wide pattern already present on Purchase Orders' list page since Sprint 4, not something this sprint introduced or silently redesigned. A future sprint could extend `_table.html` to accept a base querystring.
+- **"Estimated" Gross Profit is exactly that** (carried over from Sprint 5, unchanged this sprint): `SaleItem` snapshots only the selling price, never a cost; cost of goods sold is approximated as quantity-sold × each drug's *current* cost price, which will misstate historical periods where a drug's cost has since changed (`FUTURE_ENHANCEMENTS.md` PFE-010).
+- **Only `apps/reports` has automated test coverage in the whole project.** Pre-existing gap from Sprints 1–4 (no test files exist for `accounts`, `inventory`, `sales`, `purchases`, `stock`, `customers`, `suppliers`, or `settings_app`), not something this sprint's scope covered or should have silently expanded beyond its own module.
+
+### Upgrade Notes
+
+```bash
+pip install -r requirements.txt   # openpyxl and reportlab added; WeasyPrint removed
+python manage.py migrate          # no new migrations this sprint — reports.0001_initial already applied in v1.4.0
+python manage.py seed_role_permissions   # no changes; reuses the four reports.* permissions Sprint 5 already seeded
+```
+
+No schema changes. No existing Sprint 1–5 table, view, or template was altered beyond the sidebar's additive Reports link.
+
 ## [v1.4.0] - 2026-08-06
 
 Sprint 5 (Business Intelligence & Reporting) — foundation increment, official release. Delivers the reporting service layer and a fully permission-aware Dashboard redesign, per the Sprint 5 Build Request's own "begin with the Dashboard redesign and reporting foundation before implementing individual report pages" instruction. The Inventory/Sales/Purchase/Financial report *pages* themselves (list views, filters, CSV/Excel/PDF export) are **not** part of this release — the services backing them already exist and are tested, but nothing beyond the Dashboard exposes them yet. This release went through two internal test builds (TESTBUILD v1: foundation; TESTBUILD v2: permission-aware refinement) before QA approval, per the project's Development → TEST BUILD → QA → Fixes → Final Release workflow. Sprint 1–4 continue to work exactly as before; every change to already-released files was additive wiring or a targeted bug fix (see Fixed, below).

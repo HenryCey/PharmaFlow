@@ -1,0 +1,82 @@
+{% extends "layout/base.html" %}
+{% block page_title %}Reports{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <h2 class="text-lg font-semibold text-slate-900">Reports</h2>
+    <p class="text-sm text-slate-500 mt-0.5">Every report is filterable and exportable to CSV, Excel, and PDF.</p>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    {% if perms.reports.view_inventory_reports %}
+    <div class="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
+        <div class="px-4 py-3 border-b border-slate-200">
+            <p class="text-sm font-semibold text-slate-900">Inventory Reports</p>
+        </div>
+        <ul class="divide-y divide-slate-100">
+            <li><a href="{% url 'reports:current_stock' %}" class="block px-4 py-3 text-sm text-slate-700 hover:bg-slate-50">Current Stock</a></li>
+            <li><a href="{% url 'reports:low_stock' %}" class="block px-4 py-3 text-sm text-slate-700 hover:bg-slate-50">Low Stock</a></li>
+            <li><a href="{% url 'reports:near_expiry' %}" class="block px-4 py-3 text-sm text-slate-700 hover:bg-slate-50">Near Expiry</a></li>
+            <li><a href="{% url 'reports:expired_stock' %}" class="block px-4 py-3 text-sm text-slate-700 hover:bg-slate-50">Expired Stock</a></li>
+            <li><a href="{% url 'reports:stock_adjustments' %}" class="block px-4 py-3 text-sm text-slate-700 hover:bg-slate-50">Stock Adjustments</a></li>
+            <li><a href="{% url 'reports:inventory_movements' %}" class="block px-4 py-3 text-sm text-slate-700 hover:bg-slate-50">Inventory Movements</a></li>
+            <li><a href="{% url 'reports:inventory_valuation' %}" class="block px-4 py-3 text-sm text-slate-700 hover:bg-slate-50">Inventory Valuation</a></li>
+        </ul>
+    </div>
+    {% endif %}
+
+    {% if perms.reports.view_sales_reports %}
+    <div class="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
+        <div class="px-4 py-3 border-b border-slate-200">
+            <p class="text-sm font-semibold text-slate-900">Sales Reports</p>
+        </div>
+        <ul class="divide-y divide-slate-100">
+            <li><a href="{% url 'reports:daily_sales' %}" class="block px-4 py-3 text-sm text-slate-700 hover:bg-slate-50">Daily Sales</a></li>
+            <li><a href="{% url 'reports:weekly_sales' %}" class="block px-4 py-3 text-sm text-slate-700 hover:bg-slate-50">Weekly Sales</a></li>
+            <li><a href="{% url 'reports:monthly_sales' %}" class="block px-4 py-3 text-sm text-slate-700 hover:bg-slate-50">Monthly Sales</a></li>
+            <li><a href="{% url 'reports:sales_date_range' %}" class="block px-4 py-3 text-sm text-slate-700 hover:bg-slate-50">Date Range</a></li>
+            <li><a href="{% url 'reports:sales_by_drug' %}" class="block px-4 py-3 text-sm text-slate-700 hover:bg-slate-50">Sales by Drug</a></li>
+            <li><a href="{% url 'reports:sales_by_customer' %}" class="block px-4 py-3 text-sm text-slate-700 hover:bg-slate-50">Sales by Customer</a></li>
+            <li><a href="{% url 'reports:sales_by_cashier' %}" class="block px-4 py-3 text-sm text-slate-700 hover:bg-slate-50">Sales by Cashier</a></li>
+            <li><a href="{% url 'reports:payment_method_summary' %}" class="block px-4 py-3 text-sm text-slate-700 hover:bg-slate-50">Payment Method Summary</a></li>
+        </ul>
+    </div>
+    {% endif %}
+
+    {% if perms.reports.view_purchase_reports %}
+    <div class="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
+        <div class="px-4 py-3 border-b border-slate-200">
+            <p class="text-sm font-semibold text-slate-900">Purchase Reports</p>
+        </div>
+        <ul class="divide-y divide-slate-100">
+            <li><a href="{% url 'reports:purchase_history' %}" class="block px-4 py-3 text-sm text-slate-700 hover:bg-slate-50">Purchase History</a></li>
+            <li><a href="{% url 'reports:purchases_by_supplier' %}" class="block px-4 py-3 text-sm text-slate-700 hover:bg-slate-50">Purchases by Supplier</a></li>
+            <li><a href="{% url 'reports:purchases_by_drug' %}" class="block px-4 py-3 text-sm text-slate-700 hover:bg-slate-50">Purchases by Drug</a></li>
+            <li><a href="{% url 'reports:purchase_cost_analysis' %}" class="block px-4 py-3 text-sm text-slate-700 hover:bg-slate-50">Purchase Cost Analysis</a></li>
+            <li><a href="{% url 'reports:outstanding_purchase_orders' %}" class="block px-4 py-3 text-sm text-slate-700 hover:bg-slate-50">Outstanding Purchase Orders</a></li>
+        </ul>
+    </div>
+    {% endif %}
+
+    {% if perms.reports.view_financial_reports %}
+    <div class="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
+        <div class="px-4 py-3 border-b border-slate-200">
+            <p class="text-sm font-semibold text-slate-900">Financial Reports</p>
+        </div>
+        <ul class="divide-y divide-slate-100">
+            <li><a href="{% url 'reports:revenue' %}" class="block px-4 py-3 text-sm text-slate-700 hover:bg-slate-50">Revenue</a></li>
+            <li><a href="{% url 'reports:financial_purchase_cost' %}" class="block px-4 py-3 text-sm text-slate-700 hover:bg-slate-50">Purchase Cost</a></li>
+            <li><a href="{% url 'reports:estimated_gross_profit' %}" class="block px-4 py-3 text-sm text-slate-700 hover:bg-slate-50">Estimated Gross Profit</a></li>
+            <li><a href="{% url 'reports:inventory_value' %}" class="block px-4 py-3 text-sm text-slate-700 hover:bg-slate-50">Inventory Value</a></li>
+            <li><a href="{% url 'reports:average_daily_sales' %}" class="block px-4 py-3 text-sm text-slate-700 hover:bg-slate-50">Average Daily Sales</a></li>
+        </ul>
+    </div>
+    {% endif %}
+</div>
+
+{% if not perms.reports.view_inventory_reports and not perms.reports.view_sales_reports and not perms.reports.view_purchase_reports and not perms.reports.view_financial_reports %}
+<div class="bg-white rounded-lg shadow-sm border border-slate-200 p-10 text-center">
+    <p class="text-slate-500">You don't have permission to view any reports yet.</p>
+</div>
+{% endif %}
+{% endblock %}

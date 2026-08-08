@@ -1,0 +1,57 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+.venv/
+venv/
+env/
+ENV/
+
+# Django
+*.log
+db.sqlite3
+db.sqlite3-journal
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# IDE / Editors
+.vscode/
+.idea/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Test / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+
+# Build / distribution
+build/
+dist/
+*.egg-info/
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+
+# Local development files
+*.local
+
+# Generated media / uploads
+media/
+
+# Generated static files
+staticfiles/
+
+# Local test databases
+test_*.sqlite3

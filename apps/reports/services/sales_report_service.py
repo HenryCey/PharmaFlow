@@ -169,6 +169,22 @@ def slow_moving_drugs(*, days=30, limit=10):
     )
 
 
+def payment_method_summary(*, date_from=None, date_to=None, user=None):
+    """
+    Sprint 6 (Feature Specs: 'Payment Method Summary'). Groups completed
+    sales by payment method — added alongside the report pages that use
+    it rather than in sales_queryset itself, matching this module's
+    existing "one grouped-aggregate function per report" shape (see
+    sales_by_customer / sales_by_cashier above).
+    """
+    qs = sales_queryset(date_from=date_from, date_to=date_to, user=user)
+    return (
+        qs.values("payment_method")
+        .annotate(count=Count("id"), revenue=Coalesce(Sum("total"), Decimal("0")))
+        .order_by("-revenue")
+    )
+
+
 def receipt_history(*, date_from=None, date_to=None, cashier=None, customer=None, user=None):
     """Feature Specs: 'Receipt History' — every sale including cancelled
     ones, since a cancelled sale's receipt is still part of the history."""

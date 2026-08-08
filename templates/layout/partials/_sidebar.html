@@ -24,6 +24,7 @@
         {% url 'purchases:purchase_list' as purchase_list_url %}
         {% url 'purchases:recently_received' as recently_received_url %}
         {% url 'suppliers:supplier_list' as supplier_list_url %}
+        {% url 'reports:home' as reports_home_url %}
 
         <a href="{{ dashboard_url }}"
            class="flex items-center gap-3 px-5 py-2.5 text-sm rounded-none hover:bg-slate-800 hover:text-white transition
@@ -132,8 +133,22 @@
             <span>Suppliers</span>
         </a>
         {% endif %}
+        {% comment %}
+        Sprint 6: Reports is now real. One sidebar link to the Reports
+        Home page (which itself lists every report page the user is
+        permitted to open, grouped by category) rather than expanding
+        ~23 individual report links into the sidebar — same pattern as
+        Customers/Suppliers above, kept flat because Reports Home is
+        the category-grouped index, not a second copy of it. Still
+        gated on `perms.reports` (module-level: at least one reports.*
+        permission), matching the placeholder it replaces.
+        {% endcomment %}
         {% if perms.reports %}
-        <span class="block px-5 py-2.5 text-sm text-slate-500 cursor-not-allowed" title="Coming soon">Reports</span>
+        <a href="{{ reports_home_url }}"
+           class="flex items-center gap-3 px-5 py-2.5 text-sm hover:bg-slate-800 hover:text-white transition
+                  {% if request.resolver_match.app_name == 'reports' %}bg-slate-800 text-white border-l-2 border-primary{% endif %}">
+            <span>Reports</span>
+        </a>
         {% endif %}
 
         {% if perms.accounts.manage_users %}

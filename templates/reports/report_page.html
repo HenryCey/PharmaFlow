@@ -1,0 +1,138 @@
+{% extends "layout/base.html" %}
+{% load static %}
+{% block page_title %}{{ report_title }}{% endblock %}
+
+{% block content %}
+<style>
+    @media print {
+        body * { visibility: hidden; }
+        #print-content, #print-content * { visibility: visible; }
+        #print-content { position: absolute; top: 0; left: 0; width: 100%; }
+        .no-print { display: none !important; }
+    }
+</style>
+
+<div class="no-print flex items-center justify-between mb-4 gap-2 flex-wrap">
+    <div>
+        <h2 class="text-lg font-semibold text-slate-900">{{ report_title }}</h2>
+        {% if report_description %}<p class="text-sm text-slate-500 mt-0.5">{{ report_description }}</p>{% endif %}
+    </div>
+    <div class="flex gap-2 flex-wrap">
+        {% comment %}
+        Sprint 6 TESTBUILD v1 QA Issue 3: these six actions (Export
+        CSV/Excel/PDF, Print, Apply Filters, Reset) must all match in
+        height/padding/typography. They now share one literal class
+        string (secondary-button styling, identical to
+        components/_button.html's own "secondary" variant) rather
+        than mixing a <button> wrapped inside an <a> (invalid nested
+        interactive markup) with a bare <button> in a <form> — same
+        look, valid HTML, guaranteed-identical box model.
+        {% endcomment %}
+        <a href="{{ export_urls.csv }}"
+           class="inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium bg-white border border-slate-300 text-slate-700 hover:bg-slate-50">
+            Export CSV
+        </a>
+        <a href="{{ export_urls.xlsx }}"
+           class="inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium bg-white border border-slate-300 text-slate-700 hover:bg-slate-50">
+            Export Excel
+        </a>
+        <a href="{{ export_urls.pdf }}"
+           class="inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium bg-white border border-slate-300 text-slate-700 hover:bg-slate-50">
+            Export PDF
+        </a>
+        <button type="button" onclick="window.print();"
+            class="inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium bg-white border border-slate-300 text-slate-700 hover:bg-slate-50">
+            Print
+        </button>
+        <a href="{% url 'reports:home' %}"
+           class="inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium bg-white border border-slate-300 text-slate-700 hover:bg-slate-50">
+            Back to Reports
+        </a>
+    </div>
+</div>
+
+{# ---------- Filters ---------- #}
+{% if filter_form.fields %}
+<form method="get" class="no-print bg-white rounded-lg shadow-sm border border-slate-200 p-4 mb-4">
+    <div class="flex flex-wrap items-end gap-3">
+        {% for field in filter_form %}
+        <div>
+            <label for="{{ field.id_for_label }}" class="block text-xs font-medium text-slate-600 mb-1">{{ field.label }}</label>
+            {{ field }}
+            {% for error in field.errors %}<p class="mt-1 text-xs text-danger">{{ error }}</p>{% endfor %}
+        </div>
+        {% endfor %}
+    </div>
+    {% comment %}
+    Apply Filters/Reset sit in their own row, sized identically to
+    the toolbar above them, decoupled from the filter fields' label+
+    input stacks so nothing about the fields' own height can
+    influence these two buttons' box size.
+    {% endcomment %}
+    <div class="flex items-center gap-2 mt-3">
+        <button type="submit"
+            class="inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium bg-primary hover:bg-primary-dark text-white">
+            Apply Filters
+        </button>
+        <a href="{{ request.path }}"
+           class="inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium bg-white border border-slate-300 text-slate-700 hover:bg-slate-50">
+            Reset
+        </a>
+    </div>
+</form>
+{% endif %}
+
+{# ---------- Summary Cards ---------- #}
+{% if summary_cards %}
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    {% for card in summary_cards %}
+    {% include "components/_card.html" with title=card.label value=card.value %}
+    {% endfor %}
+</div>
+{% endif %}
+
+{# ---------- Chart ---------- #}
+{% if chart %}
+<div class="no-print bg-white rounded-lg shadow-sm border border-slate-200 p-5 mb-6">
+    <p class="text-sm font-semibold text-slate-900 mb-3">{{ report_title }}</p>
+    <div class="relative" style="height:280px">
+        <canvas id="reportChart"></canvas>
+    </div>
+</div>
+{{ chart|json_script:"report-chart-data" }}
+{% endif %}
+
+{# ---------- Table ---------- #}
+<div id="print-content">
+    {% include "components/_table.html" with headers=table_headers rows=table_rows page_obj=page_obj empty_message="No records found for the selected filters." %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if chart %}
+<script src="{% static 'vendor/chart.umd.min.js' %}"></script>
+<script>
+(function () {
+    const el = document.getElementById("report-chart-data");
+    if (!el) { return; }
+    const chart = JSON.parse(el.textContent);
+    const primary = "#0f766e";
+    new Chart(document.getElementById("reportChart"), {
+        type: "{{ chart_type|default:'line' }}",
+        data: {
+            labels: chart.labels,
+            datasets: [{
+                label: chart.label,
+                data: chart.data,
+                borderColor: primary,
+                backgroundColor: primary,
+                tension: 0.3,
+                fill: false,
+            }],
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } },
+    });
+})();
+</script>
+{% endif %}
+{% endblock %}
